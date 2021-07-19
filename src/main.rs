@@ -5,7 +5,9 @@
  */
 
 use std::io;
+
 mod lexer;
+mod parser;
 
 fn main() {
     loop {
@@ -17,8 +19,15 @@ fn main() {
                 }
                 let mut tokenizer = lexer::Tokenizer::new(input);
                 let tokens = tokenizer.tokenize();
-                for token in tokens {
+                for token in &tokens {
                     println!("{}", token);
+                }
+
+                let parser=parser::Parser::new(tokens);
+                let parse_tree=parser.parse();
+                match parse_tree{
+                    None=>println!("Parse unsuccessful"),
+                    Some(root)=>parser::print_parse_tree(&root)
                 }
             }
             Err(err) => println!("{}", err),
