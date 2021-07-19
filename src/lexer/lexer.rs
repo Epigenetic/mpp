@@ -13,10 +13,7 @@ pub struct Tokenizer {
 
 impl Tokenizer {
     pub fn new(input: String) -> Tokenizer {
-        Tokenizer {
-            input: input,
-            position: 0,
-        }
+        Tokenizer { input, position: 0 }
     }
 
     pub fn tokenize(&mut self) -> Vec<TokenType> {
@@ -37,6 +34,18 @@ impl Tokenizer {
                     });
                     self.position += 1;
                 }
+                '*' => {
+                    tokens.push(TokenType::Times {
+                        position: self.position,
+                    });
+                    self.position += 1;
+                }
+                '/' => {
+                    tokens.push(TokenType::Divide {
+                        position: self.position,
+                    });
+                    self.position += 1;
+                }
                 '0'..='9' => {
                     let result = tokenize_number(&self.input[self.position..], self.position);
                     tokens.push(result.0);
@@ -51,7 +60,7 @@ impl Tokenizer {
     }
 }
 
-fn tokenize_number<'a>(input: &'a str, position: usize) -> (TokenType<'a>, usize) {
+fn tokenize_number(input: &str, position: usize) -> (TokenType, usize) {
     let mut end = 0;
     let str_array: Vec<char> = input.chars().collect();
 

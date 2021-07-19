@@ -18,6 +18,12 @@ pub enum TokenType<'a> {
     Minus {
         position: usize,
     },
+    Times {
+        position: usize,
+    },
+    Divide {
+        position: usize,
+    },
 }
 
 impl fmt::Display for TokenType<'_> {
@@ -30,6 +36,8 @@ impl fmt::Display for TokenType<'_> {
             ),
             TokenType::Plus { position } => write!(f, "(Plus, position:{})", position),
             TokenType::Minus { position } => write!(f, "(Minus, position: {})", position),
+            TokenType::Times { position } => write!(f, "(Times, position: {})", position),
+            TokenType::Divide { position } => write!(f, "(Divide, position: {})", position),
         }
     }
 }
