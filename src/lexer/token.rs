@@ -6,6 +6,7 @@
 
 use std::fmt;
 
+#[derive(PartialEq, Debug)]
 pub enum TokenType<'a> {
     NumLit {
         value: &'a str,

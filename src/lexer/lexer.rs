@@ -81,3 +81,84 @@ fn tokenize_number(input: &str, position: usize) -> (TokenType, usize) {
         end,
     );
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_lex_plus() {
+        let input = String::from("+");
+        let mut tokenizer = Tokenizer::new(input);
+
+        let tokens = tokenizer.tokenize();
+
+        assert_eq!(tokens.len(), 1);
+        assert_eq!(tokens[0], TokenType::Plus { position: 0 });
+    }
+
+    #[test]
+    fn test_lex_minus() {
+        let input = String::from("-");
+        let mut tokenizer = Tokenizer::new(input);
+
+        let tokens = tokenizer.tokenize();
+
+        assert_eq!(tokens.len(), 1);
+        assert_eq!(tokens[0], TokenType::Minus { position: 0 });
+    }
+
+    #[test]
+    fn test_lex_times() {
+        let input = String::from("*");
+        let mut tokenizer = Tokenizer::new(input);
+
+        let tokens = tokenizer.tokenize();
+
+        assert_eq!(tokens.len(), 1);
+        assert_eq!(tokens[0], TokenType::Times { position: 0 });
+    }
+
+    #[test]
+    fn test_lex_divide() {
+        let input = String::from("/");
+        let mut tokenizer = Tokenizer::new(input);
+
+        let tokens = tokenizer.tokenize();
+
+        assert_eq!(tokens.len(), 1);
+        assert_eq!(tokens[0], TokenType::Divide { position: 0 });
+    }
+
+    #[test]
+    fn test_lex_number() {
+        let input = "123";
+        let (token, position) = tokenize_number(input, 0);
+
+        assert_eq!(
+            token,
+            TokenType::NumLit {
+                value: "123",
+                start: 0,
+                end: 2
+            }
+        );
+        assert_eq!(position, 3)
+    }
+
+    #[test]
+    fn test_lex_number_mid_string() {
+        let input = "baz 123.456 foobar";
+        let (token, position) = tokenize_number(&input[4..], 5);
+
+        assert_eq!(
+            token,
+            TokenType::NumLit {
+                value: "123.456",
+                start: 5,
+                end: 11
+            }
+        );
+        assert_eq!(position, 7);
+    }
+}
