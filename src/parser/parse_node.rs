@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
+use crate::runtime::{ADD_DECIMAL, DIV_DECIMAL, MULT_DECIMAL, PUSH_DECIMAL, SUB_DECIMAL};
 use rust_decimal::Decimal;
 use std::fmt;
 
@@ -17,6 +18,69 @@ impl ParserNode {
         ParserNode {
             children,
             node_type,
+        }
+    }
+
+    pub fn to_bytes(&self, program: &mut Vec<u8>) {
+        match &self.node_type {
+            ParserNodeType::NumericLiteral(value) => {
+                program.push(PUSH_DECIMAL);
+                for byte in value.serialize() {
+                    program.push(byte)
+                }
+            }
+            ParserNodeType::Expression => {
+                // Term
+                self.children[0].to_bytes(program);
+                // Has an ExpressionTail
+                if self.children.len() == 2 {
+                    self.children[1].to_bytes(program);
+                }
+            }
+            ParserNodeType::ExpressionTail => {
+                // Term
+                self.children[1].to_bytes(program);
+                // AddOp
+                self.children[0].to_bytes(program);
+                // Has an ExpressionTail
+                if self.children.len() == 3 {
+                    // ExpressionTail
+                    self.children[2].to_bytes(program);
+                }
+            }
+            ParserNodeType::Term => {
+                //Factor
+                self.children[0].to_bytes(program);
+                // Has a TermTail
+                if self.children.len() == 2 {
+                    // TermTail
+                    self.children[1].to_bytes(program);
+                }
+            }
+            ParserNodeType::TermTail => {
+                // Factor
+                self.children[1].to_bytes(program);
+                // MulOp
+                self.children[0].to_bytes(program);
+                // Has a TermTail
+                if self.children.len() == 3 {
+                    // TermTail
+                    self.children[2].to_bytes(program);
+                }
+            }
+            ParserNodeType::Factor => {
+                // NumericLiteral
+                //TODO: Handle more complex factors
+                self.children[0].to_bytes(program);
+            }
+            ParserNodeType::MulOp(op) => match op {
+                MulOp::Times => program.push(MULT_DECIMAL),
+                MulOp::Divide => program.push(DIV_DECIMAL),
+            },
+            ParserNodeType::AddOp(op) => match op {
+                AddOp::Plus => program.push(ADD_DECIMAL),
+                AddOp::Minus => program.push(SUB_DECIMAL),
+            },
         }
     }
 }
