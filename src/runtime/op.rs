@@ -4,44 +4,57 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
+use crate::runtime::MVal;
 use rust_decimal::Decimal;
 
-pub const PUSH_DECIMAL: u8 = 1;
-pub const ADD_DECIMAL: u8 = 2;
-pub const SUB_DECIMAL: u8 = 3;
-pub const MULT_DECIMAL: u8 = 4;
-pub const DIV_DECIMAL: u8 = 5;
+#[repr(u8)]
+pub enum Ops {
+    Push = 1,
+    Add = 2,
+    Sub = 3,
+    Mult = 4,
+    Div = 5,
+}
+
+impl Ops {
+    pub fn from_u8(value: u8) -> Ops {
+        match value {
+            1 => Ops::Push,
+            2 => Ops::Add,
+            3 => Ops::Sub,
+            4 => Ops::Mult,
+            5 => Ops::Div,
+            _ => panic!("Unrecognized op code"),
+        }
+    }
+}
 
 pub fn print_program(program: &Vec<u8>) {
     let mut index = 0;
 
     while index < program.len() {
-        match program[index] {
-            PUSH_DECIMAL => {
-                let mut arr: [u8; 16] = [0; 16];
-                for byte in 0..=15 {
-                    arr[byte] = program[index + byte + 1];
-                }
-                println!("PUSH_DECIMAL: {:?}", Decimal::deserialize(arr));
-                index += 17;
+        match Ops::from_u8(program[index]) {
+            Ops::Push => {
+                let (value, offset) = MVal::from_bytes(&program[index + 1..]);
+                println!("PUSH: {}", value);
+                index += offset + std::mem::size_of::<usize>() + 1;
             }
-            ADD_DECIMAL => {
-                println!("ADD_DECIMAL");
+            Ops::Add => {
+                println!("ADD");
                 index += 1;
             }
-            SUB_DECIMAL => {
-                println!("SUB_DECIMAL");
+            Ops::Sub => {
+                println!("SUB");
                 index += 1;
             }
-            MULT_DECIMAL => {
-                println!("MULT_DECIMAL");
+            Ops::Mult => {
+                println!("MULT");
                 index += 1;
             }
-            DIV_DECIMAL => {
-                println!("DIV_DECIMAL");
+            Ops::Div => {
+                println!("DIV");
                 index += 1;
             }
-            _ => panic!("Unknown operand"),
         }
     }
 }

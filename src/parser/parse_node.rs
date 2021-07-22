@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
-use crate::runtime::{ADD_DECIMAL, DIV_DECIMAL, MULT_DECIMAL, PUSH_DECIMAL, SUB_DECIMAL};
-use rust_decimal::Decimal;
+use crate::runtime::{MVal, Ops};
 use std::fmt;
 
 pub struct ParserNode {
@@ -24,8 +23,8 @@ impl ParserNode {
     pub fn to_bytes(&self, program: &mut Vec<u8>) {
         match &self.node_type {
             ParserNodeType::NumericLiteral(value) => {
-                program.push(PUSH_DECIMAL);
-                for byte in value.serialize() {
+                program.push(Ops::Push as u8);
+                for byte in value.to_bytes() {
                     program.push(byte)
                 }
             }
@@ -74,12 +73,12 @@ impl ParserNode {
                 self.children[0].to_bytes(program);
             }
             ParserNodeType::MulOp(op) => match op {
-                MulOp::Times => program.push(MULT_DECIMAL),
-                MulOp::Divide => program.push(DIV_DECIMAL),
+                MulOp::Times => program.push(Ops::Mult as u8),
+                MulOp::Divide => program.push(Ops::Div as u8),
             },
             ParserNodeType::AddOp(op) => match op {
-                AddOp::Plus => program.push(ADD_DECIMAL),
-                AddOp::Minus => program.push(SUB_DECIMAL),
+                AddOp::Plus => program.push(Ops::Add as u8),
+                AddOp::Minus => program.push(Ops::Sub as u8),
             },
         }
     }
@@ -101,7 +100,7 @@ impl fmt::Display for ParserNode {
 }
 
 pub enum ParserNodeType {
-    NumericLiteral(Decimal),
+    NumericLiteral(MVal),
     Expression,
     ExpressionTail,
     Term,

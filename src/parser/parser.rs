@@ -7,6 +7,7 @@
 use crate::lexer::TokenType;
 use crate::parser::parse_node::{AddOp, MulOp, ParserNode};
 use crate::parser::ParserNodeType;
+use crate::runtime::MVal;
 use rust_decimal::Decimal;
 use std::str::FromStr;
 
@@ -224,7 +225,7 @@ fn parse_factor<'a>(tokens: &'a [TokenType]) -> (Option<ParserNode>, &'a [TokenT
         } => {
             let numeric_literal = ParserNode::new(
                 Vec::new(),
-                ParserNodeType::NumericLiteral(Decimal::from_str(value).unwrap()),
+                ParserNodeType::NumericLiteral(MVal::from_string(value.to_string())),
             );
             return (
                 Some(ParserNode::new(
@@ -245,9 +246,9 @@ fn parse_factor<'a>(tokens: &'a [TokenType]) -> (Option<ParserNode>, &'a [TokenT
             {
                 let numeric_literal = ParserNode::new(
                     Vec::new(),
-                    ParserNodeType::NumericLiteral(
-                        Decimal::from_str(&*format!("-{}", value)).unwrap(),
-                    ),
+                    ParserNodeType::NumericLiteral(MVal::from_string(
+                        (&*format!("-{}", value)).to_string(),
+                    )),
                 );
                 return (
                     Some(ParserNode::new(
