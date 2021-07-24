@@ -75,6 +75,7 @@ impl ParserNode {
             ParserNodeType::MulOp(op) => match op {
                 MulOp::Times => program.push(Ops::Mult as u8),
                 MulOp::Divide => program.push(Ops::Div as u8),
+                MulOp::Modulus => program.push(Ops::Mod as u8),
             },
             ParserNodeType::AddOp(op) => match op {
                 AddOp::Plus => program.push(Ops::Add as u8),
@@ -120,6 +121,7 @@ pub enum AddOp {
 pub enum MulOp {
     Times,
     Divide,
+    Modulus,
 }
 
 pub fn print_parse_tree(root: &ParserNode) {

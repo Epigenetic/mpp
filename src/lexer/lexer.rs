@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
-use crate::lexer::TokenType;
+use crate::lexer::{Token, TokenType};
 
 pub struct Tokenizer {
     input: String,
@@ -16,34 +16,55 @@ impl Tokenizer {
         Tokenizer { input, position: 0 }
     }
 
-    pub fn tokenize(&mut self) -> Vec<TokenType> {
+    pub fn tokenize(&mut self) -> Vec<Token> {
         let mut tokens = Vec::new();
         let str_array: Vec<char> = self.input.chars().collect();
 
         while self.position < self.input.len() {
             match str_array[self.position] {
                 '+' => {
-                    tokens.push(TokenType::Plus {
-                        position: self.position,
-                    });
+                    tokens.push(Token::new(
+                        TokenType::Plus,
+                        self.position,
+                        self.position,
+                        &self.input[self.position..self.position + 1],
+                    ));
                     self.position += 1;
                 }
                 '-' => {
-                    tokens.push(TokenType::Minus {
-                        position: self.position,
-                    });
+                    tokens.push(Token::new(
+                        TokenType::Minus,
+                        self.position,
+                        self.position,
+                        &self.input[self.position..self.position + 1],
+                    ));
                     self.position += 1;
                 }
                 '*' => {
-                    tokens.push(TokenType::Times {
-                        position: self.position,
-                    });
+                    tokens.push(Token::new(
+                        TokenType::Times,
+                        self.position,
+                        self.position,
+                        &self.input[self.position..self.position + 1],
+                    ));
                     self.position += 1;
                 }
                 '/' => {
-                    tokens.push(TokenType::Divide {
-                        position: self.position,
-                    });
+                    tokens.push(Token::new(
+                        TokenType::Divide,
+                        self.position,
+                        self.position,
+                        &self.input[self.position..self.position + 1],
+                    ));
+                    self.position += 1;
+                }
+                '#' => {
+                    tokens.push(Token::new(
+                        TokenType::Modulus,
+                        self.position,
+                        self.position,
+                        &self.input[self.position..self.position + 1],
+                    ));
                     self.position += 1;
                 }
                 '0'..='9' => {
@@ -60,7 +81,7 @@ impl Tokenizer {
     }
 }
 
-fn tokenize_number(input: &str, position: usize) -> (TokenType, usize) {
+fn tokenize_number(input: &str, position: usize) -> (Token, usize) {
     let mut end = 0;
     let str_array: Vec<char> = input.chars().collect();
 
@@ -73,11 +94,12 @@ fn tokenize_number(input: &str, position: usize) -> (TokenType, usize) {
         break;
     }
     return (
-        TokenType::NumLit {
-            value: &input[0..end],
-            start: position,
-            end: end - 1 + position,
-        },
+        Token::new(
+            TokenType::NumLit,
+            position,
+            end - 1 + position,
+            &input[0..end],
+        ),
         end,
     );
 }
@@ -94,7 +116,7 @@ mod tests {
         let tokens = tokenizer.tokenize();
 
         assert_eq!(tokens.len(), 1);
-        assert_eq!(tokens[0], TokenType::Plus { position: 0 });
+        assert_eq!(tokens[0], Token::new(TokenType::Plus, 0, 0, "+"));
     }
 
     #[test]
@@ -105,7 +127,7 @@ mod tests {
         let tokens = tokenizer.tokenize();
 
         assert_eq!(tokens.len(), 1);
-        assert_eq!(tokens[0], TokenType::Minus { position: 0 });
+        assert_eq!(tokens[0], Token::new(TokenType::Minus, 0, 0, "-"));
     }
 
     #[test]
@@ -116,7 +138,7 @@ mod tests {
         let tokens = tokenizer.tokenize();
 
         assert_eq!(tokens.len(), 1);
-        assert_eq!(tokens[0], TokenType::Times { position: 0 });
+        assert_eq!(tokens[0], Token::new(TokenType::Times, 0, 0, "*"));
     }
 
     #[test]
@@ -127,7 +149,7 @@ mod tests {
         let tokens = tokenizer.tokenize();
 
         assert_eq!(tokens.len(), 1);
-        assert_eq!(tokens[0], TokenType::Divide { position: 0 });
+        assert_eq!(tokens[0], Token::new(TokenType::Divide, 0, 0, "/"));
     }
 
     #[test]
@@ -135,14 +157,7 @@ mod tests {
         let input = "123";
         let (token, position) = tokenize_number(input, 0);
 
-        assert_eq!(
-            token,
-            TokenType::NumLit {
-                value: "123",
-                start: 0,
-                end: 2
-            }
-        );
+        assert_eq!(token, Token::new(TokenType::NumLit, 0, 2, "123",));
         assert_eq!(position, 3)
     }
 
@@ -151,14 +166,7 @@ mod tests {
         let input = "baz 123.456 foobar";
         let (token, position) = tokenize_number(&input[4..], 5);
 
-        assert_eq!(
-            token,
-            TokenType::NumLit {
-                value: "123.456",
-                start: 5,
-                end: 11
-            }
-        );
+        assert_eq!(token, Token::new(TokenType::NumLit, 5, 11, "123.456",));
         assert_eq!(position, 7);
     }
 }

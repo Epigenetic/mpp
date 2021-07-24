@@ -8,4 +8,5 @@ mod lexer;
 mod token;
 
 pub use lexer::Tokenizer;
+pub use token::Token;
 pub use token::TokenType;

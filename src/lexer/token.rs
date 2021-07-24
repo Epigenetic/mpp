@@ -7,38 +7,46 @@
 use std::fmt;
 
 #[derive(PartialEq, Debug)]
-pub enum TokenType<'a> {
-    NumLit {
-        value: &'a str,
-        start: usize,
-        end: usize,
-    },
-    Plus {
-        position: usize,
-    },
-    Minus {
-        position: usize,
-    },
-    Times {
-        position: usize,
-    },
-    Divide {
-        position: usize,
-    },
+pub struct Token<'a> {
+    pub token_type: TokenType,
+    pub start: usize,
+    pub end: usize,
+    pub value: &'a str,
 }
 
-impl fmt::Display for TokenType<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            TokenType::NumLit { value, start, end } => write!(
-                f,
-                "(NumLit, value: {}, start: {}, end: {})",
-                value, start, end
-            ),
-            TokenType::Plus { position } => write!(f, "(Plus, position:{})", position),
-            TokenType::Minus { position } => write!(f, "(Minus, position: {})", position),
-            TokenType::Times { position } => write!(f, "(Times, position: {})", position),
-            TokenType::Divide { position } => write!(f, "(Divide, position: {})", position),
+impl Token<'_> {
+    pub fn new(token_type: TokenType, start: usize, end: usize, value: &str) -> Token {
+        Token {
+            token_type,
+            start,
+            end,
+            value,
         }
+    }
+}
+
+impl fmt::Display for Token<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{{Token token_type: {} start: {} end: {} value: {}}}",
+            self.token_type, self.start, self.end, self.value
+        )
+    }
+}
+
+#[derive(PartialEq, Debug)]
+pub enum TokenType {
+    NumLit,
+    Plus,
+    Minus,
+    Times,
+    Divide,
+    Modulus,
+}
+
+impl fmt::Display for TokenType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
     }
 }

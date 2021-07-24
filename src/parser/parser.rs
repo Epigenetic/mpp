@@ -4,19 +4,17 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
-use crate::lexer::TokenType;
+use crate::lexer::{Token, TokenType};
 use crate::parser::parse_node::{AddOp, MulOp, ParserNode};
 use crate::parser::ParserNodeType;
 use crate::runtime::MVal;
-use rust_decimal::Decimal;
-use std::str::FromStr;
 
 pub struct Parser<'a> {
-    tokens: Vec<TokenType<'a>>,
+    tokens: Vec<Token<'a>>,
 }
 
 impl Parser<'_> {
-    pub fn new(tokens: Vec<TokenType>) -> Parser {
+    pub fn new(tokens: Vec<Token>) -> Parser {
         Parser { tokens }
     }
 
@@ -36,7 +34,7 @@ impl Parser<'_> {
     }
 }
 /// Expression -> Term ExpressionTail
-fn parse_expression<'a>(tokens: &'a [TokenType]) -> (Option<ParserNode>, &'a [TokenType<'a>]) {
+fn parse_expression<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
     let (term, term_rest) = parse_term(tokens);
 
     if let Some(term_node) = term {
@@ -63,7 +61,7 @@ fn parse_expression<'a>(tokens: &'a [TokenType]) -> (Option<ParserNode>, &'a [To
 }
 
 /// ExpressionTail -> ε | AddOp Term ExpressionTail
-fn parse_expression_tail<'a>(tokens: &'a [TokenType]) -> (Option<ParserNode>, &'a [TokenType<'a>]) {
+fn parse_expression_tail<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
     let (add_op, add_op_rest) = parse_add_op(tokens);
 
     if let Some(add_op_node) = add_op {
@@ -99,20 +97,20 @@ fn parse_expression_tail<'a>(tokens: &'a [TokenType]) -> (Option<ParserNode>, &'
 }
 
 /// AddOp -> + | -
-fn parse_add_op<'a>(tokens: &'a [TokenType]) -> (Option<ParserNode>, &'a [TokenType<'a>]) {
+fn parse_add_op<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
     if tokens.len() == 0 {
         return (None, tokens);
     }
 
-    return match &tokens[0] {
-        TokenType::Plus { position: _ } => (
+    return match &tokens[0].token_type {
+        TokenType::Plus => (
             Some(ParserNode::new(
                 Vec::new(),
                 ParserNodeType::AddOp(AddOp::Plus),
             )),
             &tokens[1..],
         ),
-        TokenType::Minus { position: _ } => (
+        TokenType::Minus => (
             Some(ParserNode::new(
                 Vec::new(),
                 ParserNodeType::AddOp(AddOp::Minus),
@@ -124,7 +122,7 @@ fn parse_add_op<'a>(tokens: &'a [TokenType]) -> (Option<ParserNode>, &'a [TokenT
 }
 
 /// Term -> Factor TermTail
-fn parse_term<'a>(tokens: &'a [TokenType]) -> (Option<ParserNode>, &'a [TokenType<'a>]) {
+fn parse_term<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
     let (factor, factor_rest) = parse_factor(tokens);
 
     if let Some(factor_node) = factor {
@@ -151,7 +149,7 @@ fn parse_term<'a>(tokens: &'a [TokenType]) -> (Option<ParserNode>, &'a [TokenTyp
 }
 
 /// TermTail -> ε | MulOp Factor TermTail
-fn parse_term_tail<'a>(tokens: &'a [TokenType]) -> (Option<ParserNode>, &'a [TokenType<'a>]) {
+fn parse_term_tail<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
     let (mul_op, mul_op_rest) = parse_mul_op(tokens);
 
     return if let Some(mul_node) = mul_op {
@@ -184,24 +182,31 @@ fn parse_term_tail<'a>(tokens: &'a [TokenType]) -> (Option<ParserNode>, &'a [Tok
     };
 }
 
-/// MulOp -> * | /
-fn parse_mul_op<'a>(tokens: &'a [TokenType]) -> (Option<ParserNode>, &'a [TokenType<'a>]) {
+/// MulOp -> * | / | #
+fn parse_mul_op<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
     if tokens.len() == 0 {
         return (None, tokens);
     }
 
-    return match &tokens[0] {
-        TokenType::Times { position: _ } => (
+    return match &tokens[0].token_type {
+        TokenType::Times => (
             Some(ParserNode::new(
                 Vec::new(),
                 ParserNodeType::MulOp(MulOp::Times),
             )),
             &tokens[1..],
         ),
-        TokenType::Divide { position: _ } => (
+        TokenType::Divide => (
             Some(ParserNode::new(
                 Vec::new(),
                 ParserNodeType::MulOp(MulOp::Divide),
+            )),
+            &tokens[1..],
+        ),
+        TokenType::Modulus => (
+            Some(ParserNode::new(
+                Vec::new(),
+                ParserNodeType::MulOp(MulOp::Modulus),
             )),
             &tokens[1..],
         ),
@@ -210,19 +215,16 @@ fn parse_mul_op<'a>(tokens: &'a [TokenType]) -> (Option<ParserNode>, &'a [TokenT
 }
 
 /// Factor -> NumericLiteral | - NumericLiteral
-fn parse_factor<'a>(tokens: &'a [TokenType]) -> (Option<ParserNode>, &'a [TokenType<'a>]) {
+fn parse_factor<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
     if tokens.len() == 0 {
         handle_syntax_error(tokens, "Factor");
         unreachable!();
     }
 
-    match &tokens[0] {
+    match &tokens[0].token_type {
         // NumericLiteral
-        TokenType::NumLit {
-            value,
-            start: _,
-            end: _,
-        } => {
+        TokenType::NumLit => {
+            let value = tokens[0].value;
             let numeric_literal = ParserNode::new(
                 Vec::new(),
                 ParserNodeType::NumericLiteral(MVal::from_string(value.to_string())),
@@ -237,13 +239,9 @@ fn parse_factor<'a>(tokens: &'a [TokenType]) -> (Option<ParserNode>, &'a [TokenT
         }
 
         // - NumericLiteral
-        TokenType::Minus { position: _ } => {
-            if let TokenType::NumLit {
-                value,
-                start: _,
-                end: _,
-            } = tokens[1]
-            {
+        TokenType::Minus => {
+            if tokens[1].token_type == TokenType::NumLit {
+                let value = tokens[1].value;
                 let numeric_literal = ParserNode::new(
                     Vec::new(),
                     ParserNodeType::NumericLiteral(MVal::from_string(
@@ -269,7 +267,7 @@ fn parse_factor<'a>(tokens: &'a [TokenType]) -> (Option<ParserNode>, &'a [TokenT
     }
 }
 
-fn handle_syntax_error(tokens: &[TokenType], expected: &str) {
+fn handle_syntax_error(tokens: &[Token], expected: &str) {
     if tokens.len() == 0 {
         panic!("Expected {} found EOF instead", expected);
     } else {
