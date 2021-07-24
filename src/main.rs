@@ -5,6 +5,7 @@
  */
 
 use crate::runtime::print_program;
+use crate::runtime::vm::VM;
 use std::io;
 
 mod lexer;
@@ -33,7 +34,11 @@ fn main() {
                         parser::print_parse_tree(&root);
                         let mut program: Vec<u8> = Vec::new();
                         root.to_bytes(&mut program);
+                        println!("{:?}", program);
                         print_program(&program);
+
+                        let mut vm = VM::new(program);
+                        vm.execute();
                     }
                 }
             }

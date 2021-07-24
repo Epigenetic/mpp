@@ -5,7 +5,6 @@
  */
 
 use crate::runtime::MVal;
-use rust_decimal::Decimal;
 
 #[repr(u8)]
 pub enum Ops {
@@ -14,6 +13,7 @@ pub enum Ops {
     Sub = 3,
     Mult = 4,
     Div = 5,
+    Mod = 6,
 }
 
 impl Ops {
@@ -24,6 +24,7 @@ impl Ops {
             3 => Ops::Sub,
             4 => Ops::Mult,
             5 => Ops::Div,
+            6 => Ops::Mod,
             _ => panic!("Unrecognized op code"),
         }
     }
@@ -54,6 +55,10 @@ pub fn print_program(program: &Vec<u8>) {
             Ops::Div => {
                 println!("DIV");
                 index += 1;
+            }
+            Ops::Mod => {
+                println!("MOD");
+                index += 1
             }
         }
     }
