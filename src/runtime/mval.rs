@@ -5,10 +5,13 @@
  */
 
 use crate::runtime::BTree;
+use rust_decimal::prelude::{FromStr, Zero};
 use rust_decimal::Decimal;
 use std::convert::TryInto;
+use std::ops::{Add, Div, Mul, Rem, Sub};
 use std::{fmt, str};
 
+#[derive(Debug)]
 pub struct MVal {
     value: Option<String>,
     array: Option<BTree>,
@@ -49,6 +52,10 @@ impl MVal {
         byte_vec
     }
 
+    /// Convert a MVal to byte representation
+    /// They are stored in the following format:
+    /// Value is stored as the string's length followed by the string content in UFT-8
+    /// Array format TBD
     pub fn from_bytes(bytes: &[u8]) -> (MVal, usize) {
         let (size_bytes, rest) = bytes.split_at(std::mem::size_of::<usize>());
         let size = usize::from_le_bytes(size_bytes.try_into().unwrap());
@@ -62,10 +69,68 @@ impl MVal {
             size,
         )
     }
+
+    pub fn to_decimal(&self) -> Decimal {
+        match &self.value {
+            None => Decimal::zero(),
+            Some(value) => match Decimal::from_str(&*value) {
+                Ok(decimal) => decimal,
+                Err(_) => Decimal::zero(),
+            },
+        }
+    }
+
+    pub fn modulo(&self, rhs: Self) -> Self {
+        let lhs_decimal = self.to_decimal();
+        let rhs_decimal = rhs.to_decimal();
+        return MVal::from_string(
+            (((lhs_decimal % rhs_decimal) + rhs_decimal) % rhs_decimal).to_string(),
+        );
+    }
 }
 
 impl fmt::Display for MVal {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "value: {:?}, array: unimplemented", self.value)
+    }
+}
+
+impl Add for MVal {
+    type Output = MVal;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        return MVal::from_string((self.to_decimal() + rhs.to_decimal()).to_string());
+    }
+}
+
+impl Sub for MVal {
+    type Output = MVal;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        return MVal::from_string((self.to_decimal() - rhs.to_decimal()).to_string());
+    }
+}
+
+impl Mul for MVal {
+    type Output = MVal;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        return MVal::from_string((self.to_decimal() * rhs.to_decimal()).to_string());
+    }
+}
+
+impl Div for MVal {
+    type Output = MVal;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        return MVal::from_string((self.to_decimal() / rhs.to_decimal()).to_string());
+    }
+}
+
+impl Rem for MVal {
+    type Output = MVal;
+
+    fn rem(self, rhs: Self) -> Self::Output {
+        return MVal::from_string((self.to_decimal() % rhs.to_decimal()).to_string());
     }
 }
