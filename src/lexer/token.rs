@@ -43,6 +43,8 @@ pub enum TokenType {
     Times,
     Divide,
     Modulus,
+    LParen,
+    RParen,
 }
 
 impl fmt::Display for TokenType {

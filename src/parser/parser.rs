@@ -214,7 +214,7 @@ fn parse_mul_op<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]
     };
 }
 
-/// Factor -> NumericLiteral | - NumericLiteral
+/// Factor -> NumericLiteral | - NumericLiteral | ( expression )
 fn parse_factor<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
     if tokens.len() == 0 {
         handle_syntax_error(tokens, "Factor");
@@ -258,6 +258,26 @@ fn parse_factor<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]
             } else {
                 handle_syntax_error(tokens, "Factor");
                 unreachable!()
+            }
+        }
+        TokenType::LParen => {
+            println!("{:?}", tokens);
+            let (expression, expression_rest) = parse_expression(&tokens[1..]);
+            if let Some(expression_node) = expression {
+                if expression_rest[0].token_type != TokenType::RParen {
+                    handle_syntax_error(expression_rest, "Missing closing parenthesis");
+                    unreachable!();
+                }
+                return (
+                    Some(ParserNode::new(
+                        vec![expression_node],
+                        ParserNodeType::Expression,
+                    )),
+                    &expression_rest[1..],
+                );
+            } else {
+                handle_syntax_error(tokens, "No expression inside parentheses");
+                unreachable!();
             }
         }
         _ => {

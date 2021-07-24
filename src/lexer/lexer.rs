@@ -67,6 +67,24 @@ impl Tokenizer {
                     ));
                     self.position += 1;
                 }
+                '(' => {
+                    tokens.push(Token::new(
+                        TokenType::LParen,
+                        self.position,
+                        self.position,
+                        &self.input[self.position..self.position + 1],
+                    ));
+                    self.position += 1
+                }
+                ')' => {
+                    tokens.push(Token::new(
+                        TokenType::RParen,
+                        self.position,
+                        self.position,
+                        &self.input[self.position..self.position + 1],
+                    ));
+                    self.position += 1
+                }
                 '0'..='9' => {
                     let result = tokenize_number(&self.input[self.position..], self.position);
                     tokens.push(result.0);
