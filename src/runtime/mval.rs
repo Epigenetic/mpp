@@ -5,7 +5,7 @@
  */
 
 use crate::runtime::BTree;
-use rust_decimal::prelude::{FromStr, Zero};
+use rust_decimal::prelude::{FromStr, ToPrimitive, Zero};
 use rust_decimal::{Decimal, RoundingStrategy};
 use std::convert::TryInto;
 use std::ops::{Add, Div, Mul, Rem, Sub};
@@ -87,7 +87,7 @@ impl MVal {
     pub fn numeric_interpretation(&self) -> Decimal {
         match &self.value {
             None => Decimal::zero(),
-            Some(value) => {
+            Some(_) => {
                 let leading_number = self.extract_leading_number();
                 match Decimal::from_str(&*leading_number) {
                     Ok(decimal) => decimal,
@@ -144,6 +144,14 @@ impl MVal {
         );
     }
 
+    /// Raise an MVal to the rhs power. Uses floating point to do calculations for now, so not as
+    /// precise as other operations.
+    pub fn exponent(&self, rhs: Self) -> Self {
+        let lhs_double = self.numeric_interpretation().to_f64().unwrap();
+        let rhs_double = rhs.numeric_interpretation().to_f64().unwrap();
+        return MVal::from_string_no_sanitize(f64::powf(lhs_double, rhs_double).to_string());
+    }
+
     /// Extract the leading number from an MVal's value.
     fn extract_leading_number(&self) -> &str {
         if self.value == None {
@@ -165,6 +173,7 @@ impl MVal {
                     break;
                 }
                 index += 1;
+                found_dot = true;
                 continue;
             }
 

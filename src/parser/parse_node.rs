@@ -80,6 +80,30 @@ impl ParserNode {
                 // UnaryOp
                 self.children[0].to_bytes(program)
             }
+            ParserNodeType::ExpTerm => {
+                // Factor
+                self.children[0].to_bytes(program);
+
+                // Has an ExponentialTermTail
+                if self.children.len() == 2 {
+                    // ExponentialTermTail
+                    self.children[1].to_bytes(program);
+                }
+            }
+            ParserNodeType::ExpTermTail => {
+                // Factor
+                self.children[1].to_bytes(program);
+
+                // Exponential
+                self.children[0].to_bytes(program);
+
+                // Has an ExponentialTermTail
+                if self.children.len() == 3 {
+                    // ExponentialTermTail
+                    self.children[2].to_bytes(program);
+                }
+            }
+            ParserNodeType::ExpOp => program.push(Ops::Exp as u8),
             ParserNodeType::Factor => {
                 // NumericLiteral
                 //TODO: Handle more complex factors
@@ -118,6 +142,9 @@ impl fmt::Display for ParserNode {
             ParserNodeType::AddOp(op) => write!(f, "AddOp: {:?}", op),
             ParserNodeType::MulOp(op) => write!(f, "MulOp: {:?}", op),
             ParserNodeType::UnaryOp(op) => write!(f, "UnaryOp: {:?}", op),
+            ParserNodeType::ExpOp => write!(f, "ExpOp"),
+            ParserNodeType::ExpTerm => write!(f, "ExpTerm"),
+            ParserNodeType::ExpTermTail => write!(f, "ExpTermTail"),
         }
     }
 }
@@ -134,6 +161,9 @@ pub enum ParserNodeType {
     AddOp(AddOp),
     MulOp(MulOp),
     UnaryOp(UnaryOp),
+    ExpOp,
+    ExpTerm,
+    ExpTermTail,
 }
 
 #[derive(Debug)]

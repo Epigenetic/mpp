@@ -45,6 +45,7 @@ pub enum TokenType {
     Divide,
     Modulus,
     IntDivide,
+    Power,
     LParen,
     RParen,
 }

@@ -143,7 +143,7 @@ fn parse_term<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) 
             )
         };
     } else {
-        handle_syntax_error(&unary_rest, "Factor");
+        handle_syntax_error(&unary_rest, "Unary");
         unreachable!();
     }
 }
@@ -241,8 +241,8 @@ fn parse_unary<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>])
             unreachable!();
         }
     } else {
-        let (factor, factor_rest) = parse_factor(tokens);
-        (factor, factor_rest)
+        let (exponential_term, exponential_term_rest) = parse_exponential_term(tokens);
+        (exponential_term, exponential_term_rest)
     };
 }
 
@@ -265,6 +265,86 @@ fn parse_unary_op<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a
         ),
 
         _ => (None, &tokens),
+    };
+}
+
+/// ExponentialTerm -> Factor ExponentialTermTail
+fn parse_exponential_term<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
+    let (term, term_rest) = parse_factor(tokens);
+
+    if let Some(term_node) = term {
+        let (exponential_term_tail, exponential_term_tail_rest) =
+            parse_exponential_term_tail(term_rest);
+
+        if let Some(exponential_term_tail_node) = exponential_term_tail {
+            (
+                Some(ParserNode::new(
+                    vec![term_node, exponential_term_tail_node],
+                    ParserNodeType::ExpTerm,
+                )),
+                exponential_term_tail_rest,
+            )
+        } else {
+            (
+                Some(ParserNode::new(vec![term_node], ParserNodeType::ExpTerm)),
+                term_rest,
+            )
+        }
+    } else {
+        handle_syntax_error(tokens, "Term");
+        unreachable!();
+    }
+}
+
+/// ExponentialTermTail -> Exponential Factor ExponentialTermTail | ε
+fn parse_exponential_term_tail<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
+    let (exponent, exponent_rest) = parse_exponential(tokens);
+
+    return if let Some(exponent_node) = exponent {
+        let (factor, factor_rest) = parse_factor(exponent_rest);
+
+        if let Some(factor_node) = factor {
+            let (exponential_term_tail, exponential_term_tail_rest) =
+                parse_exponential_term_tail(factor_rest);
+
+            if let Some(exponential_term_tail_node) = exponential_term_tail {
+                (
+                    Some(ParserNode::new(
+                        vec![exponent_node, factor_node, exponential_term_tail_node],
+                        ParserNodeType::ExpTermTail,
+                    )),
+                    exponential_term_tail_rest,
+                )
+            } else {
+                (
+                    Some(ParserNode::new(
+                        vec![exponent_node, factor_node],
+                        ParserNodeType::ExpTermTail,
+                    )),
+                    factor_rest,
+                )
+            }
+        } else {
+            handle_syntax_error(tokens, "Factor");
+            unreachable!();
+        }
+    } else {
+        (None, tokens)
+    };
+}
+
+/// ** | ε
+fn parse_exponential<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
+    if tokens.len() == 0 {
+        return (None, tokens);
+    }
+
+    return match &tokens[0].token_type {
+        TokenType::Power => (
+            Some(ParserNode::new(Vec::new(), ParserNodeType::ExpOp)),
+            &tokens[1..],
+        ),
+        _ => (None, tokens),
     };
 }
 

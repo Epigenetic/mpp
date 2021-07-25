@@ -17,6 +17,7 @@ pub enum Ops {
     IntDiv = 7,
     ToNum = 8,
     ToNegNum = 9,
+    Exp = 10,
 }
 
 impl Ops {
@@ -31,6 +32,7 @@ impl Ops {
             7 => Ops::IntDiv,
             8 => Ops::ToNum,
             9 => Ops::ToNegNum,
+            10 => Ops::Exp,
             _ => panic!("Unrecognized op code"),
         }
     }
@@ -76,6 +78,10 @@ pub fn print_program(program: &Vec<u8>) {
             }
             Ops::ToNegNum => {
                 println!("TO_NEG_NUM");
+                index += 1
+            }
+            Ops::Exp => {
+                println!("EXP");
                 index += 1
             }
         }

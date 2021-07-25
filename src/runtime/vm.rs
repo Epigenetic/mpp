@@ -38,6 +38,7 @@ impl VM {
                 Ops::IntDiv => self.execute_integer_divide(),
                 Ops::ToNum => self.execute_to_number(),
                 Ops::ToNegNum => self.execute_to_negative_number(),
+                Ops::Exp => self.execute_exponent(),
             }
         }
         println!("Result {}", self.stack[0])
@@ -98,6 +99,14 @@ impl VM {
         self.program_counter += 1;
     }
 
+    fn execute_exponent(&mut self) {
+        let rhs = self.stack.pop().expect("No rhs for exponent");
+        let lhs = self.stack.pop().expect("No lhs for exponent");
+
+        self.stack.push(lhs.exponent(rhs));
+        self.program_counter += 1;
+    }
+
     fn execute_to_number(&mut self) {
         let operand = self.stack.pop().expect("No operand for to number");
 
@@ -111,7 +120,7 @@ impl VM {
         let operand = self.stack.pop().expect("No operand for to negative number");
 
         self.stack.push(MVal::from_string_no_sanitize(
-            ((operand.numeric_interpretation() * Decimal::from(-1)).to_string()),
+            (operand.numeric_interpretation() * Decimal::from(-1)).to_string(),
         ));
         self.program_counter += 1;
     }

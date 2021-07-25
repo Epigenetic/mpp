@@ -41,13 +41,23 @@ impl Tokenizer {
                     self.position += 1;
                 }
                 '*' => {
-                    tokens.push(Token::new(
-                        TokenType::Times,
-                        self.position,
-                        self.position,
-                        &self.input[self.position..self.position + 1],
-                    ));
-                    self.position += 1;
+                    if self.position + 1 < self.input.len() && str_array[self.position + 1] == '*' {
+                        tokens.push(Token::new(
+                            TokenType::Power,
+                            self.position,
+                            self.position,
+                            &self.input[self.position..self.position + 2],
+                        ));
+                        self.position += 2;
+                    } else {
+                        tokens.push(Token::new(
+                            TokenType::Times,
+                            self.position,
+                            self.position,
+                            &self.input[self.position..self.position + 1],
+                        ));
+                        self.position += 1;
+                    }
                 }
                 '/' => {
                     tokens.push(Token::new(
