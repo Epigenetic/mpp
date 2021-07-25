@@ -32,6 +32,10 @@ impl MVal {
         }
     }
 
+    /// Convert a MVal to byte representation
+    /// They are stored in the following format:
+    /// Value is stored as the string's length followed by the string content in UFT-8
+    /// Array format TBD
     pub fn to_bytes(&self) -> Vec<u8> {
         let value = &self.value;
         let mut byte_vec = Vec::new();
@@ -52,10 +56,7 @@ impl MVal {
         byte_vec
     }
 
-    /// Convert a MVal to byte representation
-    /// They are stored in the following format:
-    /// Value is stored as the string's length followed by the string content in UFT-8
-    /// Array format TBD
+    /// Get an MVal from bytes, see to_bytes for the expected format.
     pub fn from_bytes(bytes: &[u8]) -> (MVal, usize) {
         let (size_bytes, rest) = bytes.split_at(std::mem::size_of::<usize>());
         let size = usize::from_le_bytes(size_bytes.try_into().unwrap());
@@ -70,6 +71,9 @@ impl MVal {
         )
     }
 
+    /// Get the numeric interpretation of an MVal
+    /// If the value is numeric or the leading characters are numeric, that is the numeric
+    /// interpretation (i.e. "123foo"=123). Otherwise, the interpretation is 0.
     pub fn numeric_interpretation(&self) -> Decimal {
         match &self.value {
             None => Decimal::zero(),
@@ -83,6 +87,8 @@ impl MVal {
         }
     }
 
+    /// Get the boolean interpretation of an MVal
+    /// If it has a value with a nonzero numeric interpretation, it is true, otherwise, it is false.
     pub fn boolean_interpretation(&self) -> bool {
         match &self.value {
             None => false,
@@ -96,6 +102,9 @@ impl MVal {
         }
     }
 
+    /// Get the string interpretation of an MVal
+    /// If it has a value, it returns that, otherwise, it returns the empty string.
+    /// Array is always ignored.
     pub fn string_interpretation(&self) -> &str {
         match &self.value {
             None => "",
@@ -103,6 +112,8 @@ impl MVal {
         }
     }
 
+    /// Modulo for MVals
+    /// This is a proper modulo, not remainder like in rust
     pub fn modulo(&self, rhs: Self) -> Self {
         let lhs_decimal = self.numeric_interpretation();
         let rhs_decimal = rhs.numeric_interpretation();
@@ -123,6 +134,7 @@ impl MVal {
         );
     }
 
+    /// Extract the leading number from an MVal's value.
     fn extract_leading_number(&self) -> &str {
         if self.value == None {
             return "";
