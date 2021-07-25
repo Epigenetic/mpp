@@ -100,6 +100,18 @@ impl Tokenizer {
                     tokens.push(token);
                     self.position += size;
                 }
+                '.' => {
+                    if self.position + 1 < self.input.len()
+                        && str_array[self.position + 1].is_digit(10)
+                    {
+                        let (token, size) =
+                            tokenize_number(&self.input[self.position..], self.position);
+                        tokens.push(token);
+                        self.position += size;
+                    } else {
+                        todo!()
+                    }
+                }
                 '"' => {
                     let (token, size) =
                         tokenize_string(&self.input[self.position..], self.position);
@@ -118,10 +130,14 @@ impl Tokenizer {
 fn tokenize_number(input: &str, position: usize) -> (Token, usize) {
     let mut end = 0;
     let str_array: Vec<char> = input.chars().collect();
+    let mut found_dot = false;
 
     while end < input.len() {
         let c = str_array[end];
-        if c.is_digit(10) || c == '.' {
+        if c.is_digit(10) || (c == '.' && !found_dot) {
+            if c == '.' {
+                found_dot = true;
+            }
             end += 1;
             continue;
         }
