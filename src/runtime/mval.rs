@@ -70,7 +70,7 @@ impl MVal {
         )
     }
 
-    pub fn to_decimal(&self) -> Decimal {
+    pub fn numeric_interpretation(&self) -> Decimal {
         match &self.value {
             None => Decimal::zero(),
             Some(value) => {
@@ -83,9 +83,29 @@ impl MVal {
         }
     }
 
+    pub fn boolean_interpretation(&self) -> bool {
+        match &self.value {
+            None => false,
+            Some(_) => {
+                if self.numeric_interpretation() != Decimal::zero() {
+                    true
+                } else {
+                    false
+                }
+            }
+        }
+    }
+
+    pub fn string_interpretation(&self) -> &str {
+        match &self.value {
+            None => "",
+            Some(value) => &value,
+        }
+    }
+
     pub fn modulo(&self, rhs: Self) -> Self {
-        let lhs_decimal = self.to_decimal();
-        let rhs_decimal = rhs.to_decimal();
+        let lhs_decimal = self.numeric_interpretation();
+        let rhs_decimal = rhs.numeric_interpretation();
         return MVal::from_string(
             (((lhs_decimal % rhs_decimal) + rhs_decimal) % rhs_decimal).to_string(),
         );
@@ -126,7 +146,9 @@ impl Add for MVal {
     type Output = MVal;
 
     fn add(self, rhs: Self) -> Self::Output {
-        return MVal::from_string((self.to_decimal() + rhs.to_decimal()).to_string());
+        return MVal::from_string(
+            (self.numeric_interpretation() + rhs.numeric_interpretation()).to_string(),
+        );
     }
 }
 
@@ -134,7 +156,9 @@ impl Sub for MVal {
     type Output = MVal;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        return MVal::from_string((self.to_decimal() - rhs.to_decimal()).to_string());
+        return MVal::from_string(
+            (self.numeric_interpretation() - rhs.numeric_interpretation()).to_string(),
+        );
     }
 }
 
@@ -142,7 +166,9 @@ impl Mul for MVal {
     type Output = MVal;
 
     fn mul(self, rhs: Self) -> Self::Output {
-        return MVal::from_string((self.to_decimal() * rhs.to_decimal()).to_string());
+        return MVal::from_string(
+            (self.numeric_interpretation() * rhs.numeric_interpretation()).to_string(),
+        );
     }
 }
 
@@ -150,7 +176,9 @@ impl Div for MVal {
     type Output = MVal;
 
     fn div(self, rhs: Self) -> Self::Output {
-        return MVal::from_string((self.to_decimal() / rhs.to_decimal()).to_string());
+        return MVal::from_string(
+            (self.numeric_interpretation() / rhs.numeric_interpretation()).to_string(),
+        );
     }
 }
 
@@ -158,6 +186,8 @@ impl Rem for MVal {
     type Output = MVal;
 
     fn rem(self, rhs: Self) -> Self::Output {
-        return MVal::from_string((self.to_decimal() % rhs.to_decimal()).to_string());
+        return MVal::from_string(
+            (self.numeric_interpretation() % rhs.numeric_interpretation()).to_string(),
+        );
     }
 }
