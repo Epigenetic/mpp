@@ -25,7 +25,17 @@ impl MVal {
         }
     }
 
+    /// Creates an MVal from a string. Replaces occurrences of "" with ".
     pub fn from_string(value: String) -> MVal {
+        MVal {
+            value: Some(value.replace("\"\"", "\"")),
+            array: None,
+        }
+    }
+
+    /// Creates an MVal from a string. Does not perform the quotation mark sanitation
+    /// from_string does.
+    pub fn from_string_no_sanitize(value: String) -> MVal {
         MVal {
             value: Some(value),
             array: None,
@@ -117,7 +127,7 @@ impl MVal {
     pub fn modulo(&self, rhs: Self) -> Self {
         let lhs_decimal = self.numeric_interpretation();
         let rhs_decimal = rhs.numeric_interpretation();
-        return MVal::from_string(
+        return MVal::from_string_no_sanitize(
             (((lhs_decimal % rhs_decimal) + rhs_decimal) % rhs_decimal).to_string(),
         );
     }
@@ -127,7 +137,7 @@ impl MVal {
     pub fn integer_divide(&self, rhs: Self) -> Self {
         let lhs_decimal = self.numeric_interpretation();
         let rhs_decimal = rhs.numeric_interpretation();
-        return MVal::from_string(
+        return MVal::from_string_no_sanitize(
             (lhs_decimal / rhs_decimal)
                 .round_dp_with_strategy(0, RoundingStrategy::ToZero)
                 .to_string(),
@@ -184,7 +194,7 @@ impl Add for MVal {
     type Output = MVal;
 
     fn add(self, rhs: Self) -> Self::Output {
-        return MVal::from_string(
+        return MVal::from_string_no_sanitize(
             (self.numeric_interpretation() + rhs.numeric_interpretation()).to_string(),
         );
     }
@@ -194,7 +204,7 @@ impl Sub for MVal {
     type Output = MVal;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        return MVal::from_string(
+        return MVal::from_string_no_sanitize(
             (self.numeric_interpretation() - rhs.numeric_interpretation()).to_string(),
         );
     }
@@ -204,7 +214,7 @@ impl Mul for MVal {
     type Output = MVal;
 
     fn mul(self, rhs: Self) -> Self::Output {
-        return MVal::from_string(
+        return MVal::from_string_no_sanitize(
             (self.numeric_interpretation() * rhs.numeric_interpretation()).to_string(),
         );
     }
@@ -214,7 +224,7 @@ impl Div for MVal {
     type Output = MVal;
 
     fn div(self, rhs: Self) -> Self::Output {
-        return MVal::from_string(
+        return MVal::from_string_no_sanitize(
             (self.numeric_interpretation() / rhs.numeric_interpretation()).to_string(),
         );
     }
@@ -224,7 +234,7 @@ impl Rem for MVal {
     type Output = MVal;
 
     fn rem(self, rhs: Self) -> Self::Output {
-        return MVal::from_string(
+        return MVal::from_string_no_sanitize(
             (self.numeric_interpretation() % rhs.numeric_interpretation()).to_string(),
         );
     }

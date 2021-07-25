@@ -147,6 +147,10 @@ fn tokenize_string(input: &str, position: usize) -> (Token, usize) {
         let c = str_array[end];
         end += 1;
         if c == '"' {
+            if end < input.len() && str_array[end] == '"' {
+                end += 1;
+                continue;
+            }
             found_end = true;
             break;
         }

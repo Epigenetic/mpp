@@ -101,7 +101,7 @@ impl VM {
     fn execute_to_number(&mut self) {
         let operand = self.stack.pop().expect("No operand for to number");
 
-        self.stack.push(MVal::from_string(
+        self.stack.push(MVal::from_string_no_sanitize(
             operand.numeric_interpretation().to_string(),
         ));
         self.program_counter += 1;
@@ -110,7 +110,7 @@ impl VM {
     fn execute_to_negative_number(&mut self) {
         let operand = self.stack.pop().expect("No operand for to negative number");
 
-        self.stack.push(MVal::from_string(
+        self.stack.push(MVal::from_string_no_sanitize(
             ((operand.numeric_interpretation() * Decimal::from(-1)).to_string()),
         ));
         self.program_counter += 1;

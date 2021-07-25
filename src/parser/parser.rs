@@ -281,7 +281,7 @@ fn parse_factor<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]
             let value = tokens[0].value;
             let numeric_literal = ParserNode::new(
                 Vec::new(),
-                ParserNodeType::NumericLiteral(MVal::from_string(value.to_string())),
+                ParserNodeType::NumericLiteral(MVal::from_string_no_sanitize(value.to_string())),
             );
             return (
                 Some(ParserNode::new(
