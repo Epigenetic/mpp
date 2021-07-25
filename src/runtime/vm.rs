@@ -51,16 +51,16 @@ impl VM {
     }
 
     fn execute_add(&mut self) {
-        let rhs = self.stack.pop().unwrap();
-        let lhs = self.stack.pop().unwrap();
+        let rhs = self.stack.pop().expect("No rhs for add");
+        let lhs = self.stack.pop().expect("No lhs for add");
 
         self.stack.push(lhs + rhs);
         self.program_counter += 1;
     }
 
     fn execute_subtract(&mut self) {
-        let rhs = self.stack.pop().unwrap();
-        let lhs = self.stack.pop().unwrap();
+        let rhs = self.stack.pop().expect("No rhs for subtract");
+        let lhs = self.stack.pop().expect("No lhs for subtract");
 
         self.stack.push(lhs - rhs);
         self.program_counter += 1;
