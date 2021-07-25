@@ -28,6 +28,12 @@ impl ParserNode {
                     program.push(byte)
                 }
             }
+            ParserNodeType::StringLiteral(value) => {
+                program.push(Ops::Push as u8);
+                for byte in value.to_bytes() {
+                    program.push(byte)
+                }
+            }
             ParserNodeType::Expression => {
                 // Term
                 self.children[0].to_bytes(program);
@@ -89,6 +95,7 @@ impl fmt::Display for ParserNode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self.node_type {
             ParserNodeType::NumericLiteral(value) => write!(f, "NumericLiteral: {}", value),
+            ParserNodeType::StringLiteral(value) => write!(f, "StringLiteral: {}", value),
             ParserNodeType::Expression => write!(f, "Expression"),
             ParserNodeType::ExpressionTail => write!(f, "ExpressionTail"),
             ParserNodeType::Term => write!(f, "Term"),
@@ -102,6 +109,7 @@ impl fmt::Display for ParserNode {
 
 pub enum ParserNodeType {
     NumericLiteral(MVal),
+    StringLiteral(MVal),
     Expression,
     ExpressionTail,
     Term,

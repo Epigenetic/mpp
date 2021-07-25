@@ -73,10 +73,13 @@ impl MVal {
     pub fn to_decimal(&self) -> Decimal {
         match &self.value {
             None => Decimal::zero(),
-            Some(value) => match Decimal::from_str(&*value) {
-                Ok(decimal) => decimal,
-                Err(_) => Decimal::zero(),
-            },
+            Some(value) => {
+                let leading_number = self.extract_leading_number();
+                match Decimal::from_str(&*leading_number) {
+                    Ok(decimal) => decimal,
+                    Err(_) => Decimal::zero(),
+                }
+            }
         }
     }
 
@@ -86,6 +89,30 @@ impl MVal {
         return MVal::from_string(
             (((lhs_decimal % rhs_decimal) + rhs_decimal) % rhs_decimal).to_string(),
         );
+    }
+
+    fn extract_leading_number(&self) -> &str {
+        if self.value == None {
+            return "";
+        }
+
+        let mut index: usize = 0;
+        let str_array: Vec<char> = self.value.as_ref().unwrap().chars().collect();
+
+        while index < self.value.as_ref().unwrap().len() {
+            if index == 0 && str_array[index] == '-' {
+                index += 1;
+                continue;
+            }
+
+            if str_array[index].is_digit(10) {
+                index += 1;
+                continue;
+            }
+            break;
+        }
+
+        return &self.value.as_ref().unwrap()[0..index];
     }
 }
 

@@ -38,6 +38,7 @@ impl fmt::Display for Token<'_> {
 #[derive(PartialEq, Debug)]
 pub enum TokenType {
     NumLit,
+    StrLit,
     Plus,
     Minus,
     Times,

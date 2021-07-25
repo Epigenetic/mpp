@@ -86,9 +86,16 @@ impl Tokenizer {
                     self.position += 1
                 }
                 '0'..='9' => {
-                    let result = tokenize_number(&self.input[self.position..], self.position);
-                    tokens.push(result.0);
-                    self.position += result.1;
+                    let (token, size) =
+                        tokenize_number(&self.input[self.position..], self.position);
+                    tokens.push(token);
+                    self.position += size;
+                }
+                '"' => {
+                    let (token, size) =
+                        tokenize_string(&self.input[self.position..], self.position);
+                    tokens.push(token);
+                    self.position += size;
                 }
                 c if c.is_whitespace() => (self.position += 1), // Skip white space, for now
                 unknown => panic!("Unrecognized token pattern {}", unknown),
@@ -117,6 +124,35 @@ fn tokenize_number(input: &str, position: usize) -> (Token, usize) {
             position,
             end - 1 + position,
             &input[0..end],
+        ),
+        end,
+    );
+}
+
+fn tokenize_string(input: &str, position: usize) -> (Token, usize) {
+    let mut end = 1;
+    let str_array: Vec<char> = input.chars().collect();
+    let mut found_end = false;
+
+    while end < input.len() && !found_end {
+        let c = str_array[end];
+        end += 1;
+        if c == '"' {
+            found_end = true;
+            break;
+        }
+    }
+
+    if !found_end {
+        panic!("Did not find closing quotation mark at {}", end);
+    }
+
+    return (
+        Token::new(
+            TokenType::StrLit,
+            position + 1,
+            end - 2 + position,
+            &input[1..end - 1],
         ),
         end,
     );
@@ -186,5 +222,25 @@ mod tests {
 
         assert_eq!(token, Token::new(TokenType::NumLit, 5, 11, "123.456",));
         assert_eq!(position, 7);
+    }
+
+    #[test]
+    fn test_lex_l_paren() {
+        let input = "(";
+        let mut tokenizer = Tokenizer::new(input.to_string());
+
+        let tokens = tokenizer.tokenize();
+        assert_eq!(tokens.len(), 1);
+        assert_eq!(tokens[0], Token::new(TokenType::LParen, 0, 0, "("));
+    }
+
+    #[test]
+    fn test_lex_r_paren() {
+        let input = ")";
+        let mut tokenizer = Tokenizer::new(input.to_string());
+
+        let tokens = tokenizer.tokenize();
+        assert_eq!(tokens.len(), 1);
+        assert_eq!(tokens[0], Token::new(TokenType::RParen, 0, 0, ")"));
     }
 }

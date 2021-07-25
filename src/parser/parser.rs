@@ -214,7 +214,7 @@ fn parse_mul_op<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]
     };
 }
 
-/// Factor -> NumericLiteral | - NumericLiteral | ( expression )
+/// Factor -> NumericLiteral | - NumericLiteral | ( expression ) | StringLiteral
 fn parse_factor<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
     if tokens.len() == 0 {
         handle_syntax_error(tokens, "Factor");
@@ -260,8 +260,26 @@ fn parse_factor<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]
                 unreachable!()
             }
         }
+
+        // StringLiteral
+        TokenType::StrLit => {
+            let value = tokens[0].value;
+            let string_literal = ParserNode::new(
+                Vec::new(),
+                ParserNodeType::StringLiteral(MVal::from_string(value.to_string())),
+            );
+
+            return (
+                Some(ParserNode::new(
+                    vec![string_literal],
+                    ParserNodeType::Factor,
+                )),
+                &tokens[1..],
+            );
+        }
+
+        // ( expression )
         TokenType::LParen => {
-            println!("{:?}", tokens);
             let (expression, expression_rest) = parse_expression(&tokens[1..]);
             if let Some(expression_node) = expression {
                 if expression_rest[0].token_type != TokenType::RParen {
