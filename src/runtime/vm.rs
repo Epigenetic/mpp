@@ -6,6 +6,7 @@
 
 use crate::runtime::mval::MVal;
 use crate::runtime::Ops;
+use rust_decimal::Decimal;
 
 pub struct VM {
     stack: Vec<MVal>,
@@ -34,6 +35,9 @@ impl VM {
                 Ops::Mult => self.execute_multiply(),
                 Ops::Div => self.execute_divide(),
                 Ops::Mod => self.execute_modulus(),
+                Ops::IntDiv => self.execute_integer_divide(),
+                Ops::ToNum => self.execute_to_number(),
+                Ops::ToNegNum => self.execute_to_negative_number(),
             }
         }
         println!("Result {}", self.stack[0])
@@ -79,10 +83,36 @@ impl VM {
     }
 
     fn execute_modulus(&mut self) {
-        let rhs = self.stack.pop().unwrap();
-        let lhs = self.stack.pop().unwrap();
+        let rhs = self.stack.pop().expect("No rhs for modulus");
+        let lhs = self.stack.pop().expect("No lhs for modulus");
 
         self.stack.push(lhs.modulo(rhs));
+        self.program_counter += 1;
+    }
+
+    fn execute_integer_divide(&mut self) {
+        let rhs = self.stack.pop().expect("No rhs for integer divide");
+        let lhs = self.stack.pop().expect("No lhs for integer divide");
+
+        self.stack.push(lhs.integer_divide(rhs));
+        self.program_counter += 1;
+    }
+
+    fn execute_to_number(&mut self) {
+        let operand = self.stack.pop().expect("No operand for to number");
+
+        self.stack.push(MVal::from_string(
+            operand.numeric_interpretation().to_string(),
+        ));
+        self.program_counter += 1;
+    }
+
+    fn execute_to_negative_number(&mut self) {
+        let operand = self.stack.pop().expect("No operand for to negative number");
+
+        self.stack.push(MVal::from_string(
+            ((operand.numeric_interpretation() * Decimal::from(-1)).to_string()),
+        ));
         self.program_counter += 1;
     }
 }

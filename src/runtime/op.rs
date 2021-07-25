@@ -14,6 +14,9 @@ pub enum Ops {
     Mult = 4,
     Div = 5,
     Mod = 6,
+    IntDiv = 7,
+    ToNum = 8,
+    ToNegNum = 9,
 }
 
 impl Ops {
@@ -25,6 +28,9 @@ impl Ops {
             4 => Ops::Mult,
             5 => Ops::Div,
             6 => Ops::Mod,
+            7 => Ops::IntDiv,
+            8 => Ops::ToNum,
+            9 => Ops::ToNegNum,
             _ => panic!("Unrecognized op code"),
         }
     }
@@ -58,6 +64,18 @@ pub fn print_program(program: &Vec<u8>) {
             }
             Ops::Mod => {
                 println!("MOD");
+                index += 1
+            }
+            Ops::IntDiv => {
+                println!("INT_DIV");
+                index += 1
+            }
+            Ops::ToNum => {
+                println!("TO_NUM");
+                index += 1
+            }
+            Ops::ToNegNum => {
+                println!("TO_NEG_NUM");
                 index += 1
             }
         }

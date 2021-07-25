@@ -5,7 +5,7 @@
  */
 
 use crate::lexer::{Token, TokenType};
-use crate::parser::parse_node::{AddOp, MulOp, ParserNode};
+use crate::parser::parse_node::{AddOp, MulOp, ParserNode, UnaryOp};
 use crate::parser::ParserNodeType;
 use crate::runtime::MVal;
 
@@ -121,60 +121,60 @@ fn parse_add_op<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]
     };
 }
 
-/// Term -> Factor TermTail
+/// Term -> Unary TermTail
 fn parse_term<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
-    let (factor, factor_rest) = parse_factor(tokens);
+    let (unary, unary_rest) = parse_unary(tokens);
 
-    if let Some(factor_node) = factor {
-        let (term_tail, term_tail_rest) = parse_term_tail(factor_rest);
+    if let Some(unary_node) = unary {
+        let (term_tail, term_tail_rest) = parse_term_tail(unary_rest);
 
         return if let Some(term_tail_node) = term_tail {
             (
                 Some(ParserNode::new(
-                    vec![factor_node, term_tail_node],
+                    vec![unary_node, term_tail_node],
                     ParserNodeType::Term,
                 )),
                 term_tail_rest,
             )
         } else {
             (
-                Some(ParserNode::new(vec![factor_node], ParserNodeType::Term)),
-                factor_rest,
+                Some(ParserNode::new(vec![unary_node], ParserNodeType::Term)),
+                unary_rest,
             )
         };
     } else {
-        handle_syntax_error(&factor_rest, "Factor");
+        handle_syntax_error(&unary_rest, "Factor");
         unreachable!();
     }
 }
 
-/// TermTail -> ε | MulOp Factor TermTail
+/// TermTail -> ε | MulOp Unary TermTail
 fn parse_term_tail<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
     let (mul_op, mul_op_rest) = parse_mul_op(tokens);
 
     return if let Some(mul_node) = mul_op {
-        let (factor, factor_rest) = parse_factor(mul_op_rest);
+        let (unary, unary_rest) = parse_unary(mul_op_rest);
 
-        if let Some(factor_node) = factor {
-            let (term_tail, term_tail_rest) = parse_term_tail(factor_rest);
+        if let Some(unary_node) = unary {
+            let (term_tail, term_tail_rest) = parse_term_tail(unary_rest);
 
             if let Some(term_tail_node) = term_tail {
                 let parse_node = ParserNode::new(
-                    vec![mul_node, factor_node, term_tail_node],
+                    vec![mul_node, unary_node, term_tail_node],
                     ParserNodeType::TermTail,
                 );
                 (Some(parse_node), term_tail_rest)
             } else {
                 (
                     Some(ParserNode::new(
-                        vec![mul_node, factor_node],
+                        vec![mul_node, unary_node],
                         ParserNodeType::TermTail,
                     )),
                     term_tail_rest,
                 )
             }
         } else {
-            handle_syntax_error(factor_rest, "Factor");
+            handle_syntax_error(unary_rest, "Factor");
             unreachable!();
         }
     } else {
@@ -182,7 +182,7 @@ fn parse_term_tail<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'
     };
 }
 
-/// MulOp -> * | / | #
+/// MulOp -> * | / | # | \ | ε
 fn parse_mul_op<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
     if tokens.len() == 0 {
         return (None, tokens);
@@ -210,11 +210,65 @@ fn parse_mul_op<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]
             )),
             &tokens[1..],
         ),
+        TokenType::IntDivide => (
+            Some(ParserNode::new(
+                Vec::new(),
+                ParserNodeType::MulOp(MulOp::IntegerDivide),
+            )),
+            &tokens[1..],
+        ),
         _ => (None, tokens),
     };
 }
 
-/// Factor -> NumericLiteral | - NumericLiteral | ( expression ) | StringLiteral
+/// Unary -> UnaryOp Unary | Factor
+fn parse_unary<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
+    let (unary_op, unary_op_rest) = parse_unary_op(tokens);
+
+    return if let Some(unary_op_node) = unary_op {
+        let (unary, unary_rest) = parse_unary(unary_op_rest);
+
+        if let Some(unary_node) = unary {
+            (
+                Some(ParserNode::new(
+                    vec![unary_op_node, unary_node],
+                    ParserNodeType::Unary,
+                )),
+                unary_rest,
+            )
+        } else {
+            handle_syntax_error(tokens, "Unary");
+            unreachable!();
+        }
+    } else {
+        let (factor, factor_rest) = parse_factor(tokens);
+        (factor, factor_rest)
+    };
+}
+
+/// UnaryOp -> + | - | ε
+fn parse_unary_op<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
+    return match &tokens[0].token_type {
+        TokenType::Plus => (
+            Some(ParserNode::new(
+                Vec::new(),
+                ParserNodeType::UnaryOp(UnaryOp::Plus),
+            )),
+            &tokens[1..],
+        ),
+        TokenType::Minus => (
+            Some(ParserNode::new(
+                Vec::new(),
+                ParserNodeType::UnaryOp(UnaryOp::Minus),
+            )),
+            &tokens[1..],
+        ),
+
+        _ => (None, &tokens),
+    };
+}
+
+/// Factor -> NumericLiteral | ( expression ) | StringLiteral
 fn parse_factor<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
     if tokens.len() == 0 {
         handle_syntax_error(tokens, "Factor");
@@ -236,29 +290,6 @@ fn parse_factor<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]
                 )),
                 &tokens[1..],
             );
-        }
-
-        // - NumericLiteral
-        TokenType::Minus => {
-            if tokens[1].token_type == TokenType::NumLit {
-                let value = tokens[1].value;
-                let numeric_literal = ParserNode::new(
-                    Vec::new(),
-                    ParserNodeType::NumericLiteral(MVal::from_string(
-                        (&*format!("-{}", value)).to_string(),
-                    )),
-                );
-                return (
-                    Some(ParserNode::new(
-                        vec![numeric_literal],
-                        ParserNodeType::Factor,
-                    )),
-                    &tokens[2..],
-                );
-            } else {
-                handle_syntax_error(tokens, "Factor");
-                unreachable!()
-            }
         }
 
         // StringLiteral

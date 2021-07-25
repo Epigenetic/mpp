@@ -67,6 +67,15 @@ impl Tokenizer {
                     ));
                     self.position += 1;
                 }
+                '\\' => {
+                    tokens.push(Token::new(
+                        TokenType::IntDivide,
+                        self.position,
+                        self.position,
+                        &self.input[self.position..self.position + 1],
+                    ));
+                    self.position += 1;
+                }
                 '(' => {
                     tokens.push(Token::new(
                         TokenType::LParen,

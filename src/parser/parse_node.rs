@@ -73,6 +73,13 @@ impl ParserNode {
                     self.children[2].to_bytes(program);
                 }
             }
+            ParserNodeType::Unary => {
+                // Unary
+                self.children[1].to_bytes(program);
+
+                // UnaryOp
+                self.children[0].to_bytes(program)
+            }
             ParserNodeType::Factor => {
                 // NumericLiteral
                 //TODO: Handle more complex factors
@@ -82,10 +89,16 @@ impl ParserNode {
                 MulOp::Times => program.push(Ops::Mult as u8),
                 MulOp::Divide => program.push(Ops::Div as u8),
                 MulOp::Modulus => program.push(Ops::Mod as u8),
+                MulOp::IntegerDivide => program.push(Ops::IntDiv as u8),
             },
             ParserNodeType::AddOp(op) => match op {
                 AddOp::Plus => program.push(Ops::Add as u8),
                 AddOp::Minus => program.push(Ops::Sub as u8),
+            },
+            ParserNodeType::UnaryOp(op) => match op {
+                UnaryOp::Plus => program.push(Ops::ToNum as u8),
+                UnaryOp::Minus => program.push(Ops::ToNegNum as u8),
+                UnaryOp::Not => todo!(),
             },
         }
     }
@@ -100,9 +113,11 @@ impl fmt::Display for ParserNode {
             ParserNodeType::ExpressionTail => write!(f, "ExpressionTail"),
             ParserNodeType::Term => write!(f, "Term"),
             ParserNodeType::TermTail => write!(f, "TermTail"),
+            ParserNodeType::Unary => write!(f, "Unary"),
             ParserNodeType::Factor => write!(f, "Factor"),
             ParserNodeType::AddOp(op) => write!(f, "AddOp: {:?}", op),
             ParserNodeType::MulOp(op) => write!(f, "MulOp: {:?}", op),
+            ParserNodeType::UnaryOp(op) => write!(f, "UnaryOp: {:?}", op),
         }
     }
 }
@@ -114,9 +129,11 @@ pub enum ParserNodeType {
     ExpressionTail,
     Term,
     TermTail,
+    Unary,
     Factor,
     AddOp(AddOp),
     MulOp(MulOp),
+    UnaryOp(UnaryOp),
 }
 
 #[derive(Debug)]
@@ -130,6 +147,14 @@ pub enum MulOp {
     Times,
     Divide,
     Modulus,
+    IntegerDivide,
+}
+
+#[derive(Debug)]
+pub enum UnaryOp {
+    Plus,
+    Minus,
+    Not,
 }
 
 pub fn print_parse_tree(root: &ParserNode) {

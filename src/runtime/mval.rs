@@ -6,7 +6,7 @@
 
 use crate::runtime::BTree;
 use rust_decimal::prelude::{FromStr, Zero};
-use rust_decimal::Decimal;
+use rust_decimal::{Decimal, RoundingStrategy};
 use std::convert::TryInto;
 use std::ops::{Add, Div, Mul, Rem, Sub};
 use std::{fmt, str};
@@ -111,6 +111,18 @@ impl MVal {
         );
     }
 
+    /// Integer division for MVals. Essentially arithmetic division, but any fractional part of the
+    /// result is discarded
+    pub fn integer_divide(&self, rhs: Self) -> Self {
+        let lhs_decimal = self.numeric_interpretation();
+        let rhs_decimal = rhs.numeric_interpretation();
+        return MVal::from_string(
+            (lhs_decimal / rhs_decimal)
+                .round_dp_with_strategy(0, RoundingStrategy::ToZero)
+                .to_string(),
+        );
+    }
+
     fn extract_leading_number(&self) -> &str {
         if self.value == None {
             return "";
@@ -118,9 +130,18 @@ impl MVal {
 
         let mut index: usize = 0;
         let str_array: Vec<char> = self.value.as_ref().unwrap().chars().collect();
+        let mut found_dot = false;
 
         while index < self.value.as_ref().unwrap().len() {
             if index == 0 && str_array[index] == '-' {
+                index += 1;
+                continue;
+            }
+
+            if str_array[index] == '.' {
+                if found_dot {
+                    break;
+                }
                 index += 1;
                 continue;
             }
@@ -130,6 +151,11 @@ impl MVal {
                 continue;
             }
             break;
+        }
+
+        // If we just found a dot without any accompanying digits
+        if index == 0 && str_array[0] == '.' {
+            return "";
         }
 
         return &self.value.as_ref().unwrap()[0..index];
