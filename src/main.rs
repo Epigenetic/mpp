@@ -6,13 +6,17 @@
 
 use crate::runtime::print_program;
 use crate::runtime::vm::VM;
-use std::io;
+use crate::Flags::{ExecutionOutput, LexerOutput, ParserOutput, PrintProgram};
+use std::{env, io};
 
 mod lexer;
 mod parser;
 mod runtime;
 
 fn main() {
+    let args: Vec<String> = env::args().collect();
+    let flags = parse_args(args);
+
     loop {
         let mut input = String::new();
         match io::stdin().read_line(&mut input) {
@@ -22,8 +26,11 @@ fn main() {
                 }
                 let mut tokenizer = lexer::Tokenizer::new(input);
                 let tokens = tokenizer.tokenize();
-                for token in &tokens {
-                    println!("{}", token);
+
+                if flags.contains(&LexerOutput) {
+                    for token in &tokens {
+                        println!("{}", token);
+                    }
                 }
 
                 let parser = parser::Parser::new(tokens);
@@ -31,13 +38,17 @@ fn main() {
                 match parse_tree {
                     None => println!("Parse unsuccessful"),
                     Some(root) => {
-                        parser::print_parse_tree(&root);
+                        if flags.contains(&ParserOutput) {
+                            parser::print_parse_tree(&root);
+                        }
                         let mut program: Vec<u8> = Vec::new();
                         root.to_bytes(&mut program);
-                        println!("{:?}", program);
-                        print_program(&program);
+                        if flags.contains(&PrintProgram) {
+                            println!("{:?}", program);
+                            print_program(&program);
+                        }
 
-                        let mut vm = VM::new(program);
+                        let mut vm = VM::new(program, flags.contains(&ExecutionOutput));
                         vm.execute();
                     }
                 }
@@ -45,4 +56,27 @@ fn main() {
             Err(err) => println!("{}", err),
         }
     }
+}
+
+fn parse_args(args: Vec<String>) -> Vec<Flags> {
+    let mut flags: Vec<Flags> = Vec::new();
+    for arg in &args[1..] {
+        match &arg[0..] {
+            "--lexer" | "-l" => flags.push(LexerOutput),
+            "--parser" | "-p" => flags.push(ParserOutput),
+            "--program" | "-P" => flags.push(PrintProgram),
+            "--execution" | "-e" => flags.push(ExecutionOutput),
+            _ => panic!("Unrecognized argument {}", arg),
+        }
+    }
+
+    return flags;
+}
+
+#[derive(PartialEq)]
+enum Flags {
+    LexerOutput,
+    ParserOutput,
+    PrintProgram,
+    ExecutionOutput,
 }

@@ -14,20 +14,24 @@ pub struct VM {
     stack: Vec<MVal>,
     program: Vec<u8>,
     program_counter: usize,
+    print_status: bool,
 }
 
 impl VM {
-    pub fn new(program: Vec<u8>) -> VM {
+    pub fn new(program: Vec<u8>, print_status: bool) -> VM {
         VM {
             stack: Vec::new(),
             program,
             program_counter: 0,
+            print_status,
         }
     }
 
     pub fn execute(&mut self) {
         while self.program_counter < self.program.len() {
-            println!("{} {:?}", self.program_counter, self.stack);
+            if self.print_status {
+                println!("PC: {} Stack: {:?}", self.program_counter, self.stack);
+            }
             let op = Ops::from_u8(self.program[self.program_counter]);
 
             match op {
@@ -133,7 +137,7 @@ impl VM {
         let operand = self.stack.pop().expect("No operand for write");
 
         print!("{}", operand.string_interpretation());
-        io::stdout().flush();
+        io::stdout().flush().expect("Issue flushing stdout");
         self.program_counter += 1;
     }
 }
