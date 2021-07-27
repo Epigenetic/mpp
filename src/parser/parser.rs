@@ -63,7 +63,7 @@ fn parse_write_statement<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [T
 
 /// WriteExpressionList -> Expression WriteExpressionListTail
 fn parse_write_expression_list<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
-    let (expression, expression_rest) = parse_expression(tokens);
+    let (expression, expression_rest) = parse_write_expression(tokens);
 
     if let Some(expression_node) = expression {
         let (write_expression_list_tail, write_expression_list_tail_rest) =
@@ -92,7 +92,7 @@ fn parse_write_expression_list<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, 
     }
 }
 
-/// Comma Expression WriteExpressionListTail | ε
+/// Comma WriteExpression WriteExpressionListTail | ε
 fn parse_write_expr_list_tail<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
     if tokens.len() == 0 {
         return (None, tokens);
@@ -100,7 +100,7 @@ fn parse_write_expr_list_tail<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &
 
     return match &tokens[0].token_type {
         TokenType::Comma => {
-            let (expression, expression_rest) = parse_expression(&tokens[1..]);
+            let (expression, expression_rest) = parse_write_expression(&tokens[1..]);
 
             if let Some(expression_node) = expression {
                 let (expr_list_tail, expr_list_tail_rest) =
@@ -129,6 +129,54 @@ fn parse_write_expr_list_tail<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &
             }
         }
         _ => (None, tokens),
+    };
+}
+
+fn parse_write_expression<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
+    if tokens.len() == 0 {
+        return (None, tokens);
+    }
+
+    return match &tokens[0].token_type {
+        TokenType::Hash => {
+            let write_clear_screen_node =
+                ParserNode::new(Vec::new(), ParserNodeType::WriteClearScreen);
+
+            (
+                Some(ParserNode::new(
+                    vec![write_clear_screen_node],
+                    ParserNodeType::WriteExpression,
+                )),
+                &tokens[1..],
+            )
+        }
+        TokenType::Bang => {
+            let write_new_line_node = ParserNode::new(Vec::new(), ParserNodeType::WriteNewLine);
+
+            (
+                Some(ParserNode::new(
+                    vec![write_new_line_node],
+                    ParserNodeType::WriteExpression,
+                )),
+                &tokens[1..],
+            )
+        }
+        _ => {
+            let (expression, expression_rest) = parse_expression(tokens);
+
+            return if let Some(expression_node) = expression {
+                (
+                    Some(ParserNode::new(
+                        vec![expression_node],
+                        ParserNodeType::WriteExpression,
+                    )),
+                    expression_rest,
+                )
+            } else {
+                handle_syntax_error(tokens, "Expression");
+                unreachable!()
+            };
+        }
     };
 }
 
@@ -302,7 +350,7 @@ fn parse_mul_op<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]
             )),
             &tokens[1..],
         ),
-        TokenType::Modulus => (
+        TokenType::Hash => (
             Some(ParserNode::new(
                 Vec::new(),
                 ParserNodeType::MulOp(MulOp::Modulus),

@@ -43,13 +43,14 @@ pub enum TokenType {
     Minus,
     Times,
     Divide,
-    Modulus,
+    Hash,
     IntDivide,
     Power,
     LParen,
     RParen,
     Comma,
     Reserved(ReservedToken),
+    Bang,
 }
 
 #[derive(PartialEq, Debug)]

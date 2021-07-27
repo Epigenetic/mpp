@@ -19,6 +19,8 @@ pub enum Ops {
     ToNegNum = 9,
     Exp = 10,
     Write = 11,
+    WriteLine = 12,
+    WriteClearScreen = 13,
 }
 
 impl Ops {
@@ -35,6 +37,8 @@ impl Ops {
             9 => Ops::ToNegNum,
             10 => Ops::Exp,
             11 => Ops::Write,
+            12 => Ops::WriteLine,
+            13 => Ops::WriteClearScreen,
             _ => panic!("Unrecognized op code"),
         }
     }
@@ -89,6 +93,14 @@ pub fn print_program(program: &Vec<u8>) {
             Ops::Write => {
                 println!("WRITE");
                 index += 1
+            }
+            Ops::WriteLine => {
+                println!("WRITE_LINE");
+                index += 1;
+            }
+            Ops::WriteClearScreen => {
+                println!("WRITE_CLEAR_SCREEN");
+                index += 1;
             }
         }
     }

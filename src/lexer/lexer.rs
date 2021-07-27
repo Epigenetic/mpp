@@ -71,7 +71,7 @@ impl Tokenizer {
                 }
                 '#' => {
                     tokens.push(Token::new(
-                        TokenType::Modulus,
+                        TokenType::Hash,
                         self.position,
                         self.position,
                         &self.input[self.position..self.position + 1],
@@ -113,6 +113,15 @@ impl Tokenizer {
                         &self.input[self.position..self.position + 1],
                     ));
                     self.position += 1
+                }
+                '!' => {
+                    tokens.push(Token::new(
+                        TokenType::Bang,
+                        self.position,
+                        self.position,
+                        &self.input[self.position..self.position + 1],
+                    ));
+                    self.position += 1;
                 }
                 'w' | 'W' => {
                     let (token, size) = tokenize_write(&self.input[self.position..], self.position);

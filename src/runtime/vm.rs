@@ -46,6 +46,8 @@ impl VM {
                 Ops::ToNegNum => self.execute_to_negative_number(),
                 Ops::Exp => self.execute_exponent(),
                 Ops::Write => self.execute_write(),
+                Ops::WriteLine => self.execute_write_line(),
+                Ops::WriteClearScreen => self.execute_write_clear_screen(),
             }
         }
     }
@@ -139,5 +141,16 @@ impl VM {
         print!("{}", operand.string_interpretation());
         io::stdout().flush().expect("Issue flushing stdout");
         self.program_counter += 1;
+    }
+
+    fn execute_write_line(&mut self) {
+        println!();
+        self.program_counter += 1;
+    }
+
+    fn execute_write_clear_screen(&mut self) {
+        print!("\x1B[2J\x1B[1;1H");
+        io::stdout().flush().expect("Issue flushing stdout");
+        self.program_counter += 1
     }
 }

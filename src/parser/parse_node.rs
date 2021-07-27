@@ -26,10 +26,18 @@ impl ParserNode {
                 // WriteExpressionList
                 self.children[0].to_bytes(program);
             }
+            ParserNodeType::WriteExpression => {
+                // Expression | ! | #
+                self.children[0].to_bytes(program);
+                if self.children[0].node_type == ParserNodeType::Expression {
+                    program.push(Ops::Write as u8);
+                }
+            }
+            ParserNodeType::WriteNewLine => program.push(Ops::WriteLine as u8),
+            ParserNodeType::WriteClearScreen => program.push(Ops::WriteClearScreen as u8),
             ParserNodeType::WriteExpressionList => {
                 // Expression
                 self.children[0].to_bytes(program);
-                program.push(Ops::Write as u8);
 
                 // Has a WriteExpressionListTail
                 if self.children.len() == 2 {
@@ -40,7 +48,6 @@ impl ParserNode {
             ParserNodeType::WriteExpressionListTail => {
                 //Expression
                 self.children[0].to_bytes(program);
-                program.push(Ops::Write as u8);
 
                 // Has a WriteExpressionListTail
                 if self.children.len() == 2 {
@@ -158,6 +165,9 @@ impl fmt::Display for ParserNode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self.node_type {
             ParserNodeType::WriteStatement => write!(f, "WriteStatement"),
+            ParserNodeType::WriteExpression => write!(f, "WriteExpression"),
+            ParserNodeType::WriteNewLine => write!(f, "WriteNewLine"),
+            ParserNodeType::WriteClearScreen => write!(f, "WriteClearScreen"),
             ParserNodeType::WriteExpressionList => write!(f, "WriteExpressionList"),
             ParserNodeType::WriteExpressionListTail => write!(f, "WriteExpressionListTail"),
             ParserNodeType::Expression => write!(f, "Expression"),
@@ -178,6 +188,7 @@ impl fmt::Display for ParserNode {
     }
 }
 
+#[derive(PartialEq)]
 pub enum ParserNodeType {
     NumericLiteral(MVal),
     StringLiteral(MVal),
@@ -196,15 +207,18 @@ pub enum ParserNodeType {
     WriteStatement,
     WriteExpressionList,
     WriteExpressionListTail,
+    WriteExpression,
+    WriteNewLine,
+    WriteClearScreen,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum AddOp {
     Plus,
     Minus,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum MulOp {
     Times,
     Divide,
@@ -212,7 +226,7 @@ pub enum MulOp {
     IntegerDivide,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum UnaryOp {
     Plus,
     Minus,
