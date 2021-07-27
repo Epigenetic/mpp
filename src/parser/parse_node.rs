@@ -22,16 +22,30 @@ impl ParserNode {
 
     pub fn to_bytes(&self, program: &mut Vec<u8>) {
         match &self.node_type {
-            ParserNodeType::NumericLiteral(value) => {
-                program.push(Ops::Push as u8);
-                for byte in value.to_bytes() {
-                    program.push(byte)
+            ParserNodeType::WriteStatement => {
+                // WriteExpressionList
+                self.children[0].to_bytes(program);
+            }
+            ParserNodeType::WriteExpressionList => {
+                // Expression
+                self.children[0].to_bytes(program);
+                program.push(Ops::Write as u8);
+
+                // Has a WriteExpressionListTail
+                if self.children.len() == 2 {
+                    // ExpressionListTail
+                    self.children[1].to_bytes(program);
                 }
             }
-            ParserNodeType::StringLiteral(value) => {
-                program.push(Ops::Push as u8);
-                for byte in value.to_bytes() {
-                    program.push(byte)
+            ParserNodeType::WriteExpressionListTail => {
+                //Expression
+                self.children[0].to_bytes(program);
+                program.push(Ops::Write as u8);
+
+                // Has a WriteExpressionListTail
+                if self.children.len() == 2 {
+                    // WriteExpressionListTail
+                    self.children[1].to_bytes(program)
                 }
             }
             ParserNodeType::Expression => {
@@ -105,7 +119,7 @@ impl ParserNode {
             }
             ParserNodeType::ExpOp => program.push(Ops::Exp as u8),
             ParserNodeType::Factor => {
-                // NumericLiteral
+                // NumericLiteral | StringLiteral
                 //TODO: Handle more complex factors
                 self.children[0].to_bytes(program);
             }
@@ -124,6 +138,18 @@ impl ParserNode {
                 UnaryOp::Minus => program.push(Ops::ToNegNum as u8),
                 UnaryOp::Not => todo!(),
             },
+            ParserNodeType::NumericLiteral(value) => {
+                program.push(Ops::Push as u8);
+                for byte in value.to_bytes() {
+                    program.push(byte)
+                }
+            }
+            ParserNodeType::StringLiteral(value) => {
+                program.push(Ops::Push as u8);
+                for byte in value.to_bytes() {
+                    program.push(byte)
+                }
+            }
         }
     }
 }
@@ -131,8 +157,9 @@ impl ParserNode {
 impl fmt::Display for ParserNode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self.node_type {
-            ParserNodeType::NumericLiteral(value) => write!(f, "NumericLiteral: {}", value),
-            ParserNodeType::StringLiteral(value) => write!(f, "StringLiteral: {}", value),
+            ParserNodeType::WriteStatement => write!(f, "WriteStatement"),
+            ParserNodeType::WriteExpressionList => write!(f, "WriteExpressionList"),
+            ParserNodeType::WriteExpressionListTail => write!(f, "WriteExpressionListTail"),
             ParserNodeType::Expression => write!(f, "Expression"),
             ParserNodeType::ExpressionTail => write!(f, "ExpressionTail"),
             ParserNodeType::Term => write!(f, "Term"),
@@ -145,6 +172,8 @@ impl fmt::Display for ParserNode {
             ParserNodeType::ExpOp => write!(f, "ExpOp"),
             ParserNodeType::ExpTerm => write!(f, "ExpTerm"),
             ParserNodeType::ExpTermTail => write!(f, "ExpTermTail"),
+            ParserNodeType::StringLiteral(value) => write!(f, "StringLiteral: {}", value),
+            ParserNodeType::NumericLiteral(value) => write!(f, "NumericLiteral: {}", value),
         }
     }
 }
@@ -164,6 +193,9 @@ pub enum ParserNodeType {
     ExpOp,
     ExpTerm,
     ExpTermTail,
+    WriteStatement,
+    WriteExpressionList,
+    WriteExpressionListTail,
 }
 
 #[derive(Debug)]

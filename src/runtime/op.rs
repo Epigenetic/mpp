@@ -18,6 +18,7 @@ pub enum Ops {
     ToNum = 8,
     ToNegNum = 9,
     Exp = 10,
+    Write = 11,
 }
 
 impl Ops {
@@ -33,6 +34,7 @@ impl Ops {
             8 => Ops::ToNum,
             9 => Ops::ToNegNum,
             10 => Ops::Exp,
+            11 => Ops::Write,
             _ => panic!("Unrecognized op code"),
         }
     }
@@ -82,6 +84,10 @@ pub fn print_program(program: &Vec<u8>) {
             }
             Ops::Exp => {
                 println!("EXP");
+                index += 1
+            }
+            Ops::Write => {
+                println!("WRITE");
                 index += 1
             }
         }

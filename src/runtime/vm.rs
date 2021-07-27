@@ -7,6 +7,8 @@
 use crate::runtime::mval::MVal;
 use crate::runtime::Ops;
 use rust_decimal::Decimal;
+use std::io;
+use std::io::Write;
 
 pub struct VM {
     stack: Vec<MVal>,
@@ -39,9 +41,9 @@ impl VM {
                 Ops::ToNum => self.execute_to_number(),
                 Ops::ToNegNum => self.execute_to_negative_number(),
                 Ops::Exp => self.execute_exponent(),
+                Ops::Write => self.execute_write(),
             }
         }
-        println!("Result {}", self.stack[0])
     }
 
     fn execute_push(&mut self) {
@@ -122,6 +124,16 @@ impl VM {
         self.stack.push(MVal::from_string_no_sanitize(
             (operand.numeric_interpretation() * Decimal::from(-1)).to_string(),
         ));
+        self.program_counter += 1;
+    }
+
+    fn execute_write(&mut self) {
+        //TODO: Update $X and $Y
+
+        let operand = self.stack.pop().expect("No operand for write");
+
+        print!("{}", operand.string_interpretation());
+        io::stdout().flush();
         self.program_counter += 1;
     }
 }

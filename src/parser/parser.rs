@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
-use crate::lexer::{Token, TokenType};
+use crate::lexer::{ReservedToken, Token, TokenType};
 use crate::parser::parse_node::{AddOp, MulOp, ParserNode, UnaryOp};
 use crate::parser::ParserNodeType;
 use crate::runtime::MVal;
@@ -23,7 +23,7 @@ impl Parser<'_> {
             return None;
         }
 
-        let (expression, expression_rest) = parse_expression(&self.tokens[0..]);
+        let (expression, expression_rest) = parse_write_statement(&self.tokens);
         if expression_rest.len() != 0 {
             println!("Warning: not all tokens processed.");
             for token in expression_rest {
@@ -33,6 +33,105 @@ impl Parser<'_> {
         return expression;
     }
 }
+
+/// WriteStatement -> Write WriteExpressionList
+fn parse_write_statement<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
+    match &tokens[0].token_type {
+        TokenType::Reserved(ReservedToken::Write) => {
+            let (write_expression_list, write_expression_list_rest) =
+                parse_write_expression_list(&tokens[1..]);
+
+            return if let Some(write_expression_list_node) = write_expression_list {
+                (
+                    Some(ParserNode::new(
+                        vec![write_expression_list_node],
+                        ParserNodeType::WriteStatement,
+                    )),
+                    write_expression_list_rest,
+                )
+            } else {
+                handle_syntax_error(tokens, "WriteExpressionList");
+                unreachable!();
+            };
+        }
+        _ => {
+            handle_syntax_error(tokens, "Write");
+            unreachable!();
+        }
+    }
+}
+
+/// WriteExpressionList -> Expression WriteExpressionListTail
+fn parse_write_expression_list<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
+    let (expression, expression_rest) = parse_expression(tokens);
+
+    if let Some(expression_node) = expression {
+        let (write_expression_list_tail, write_expression_list_tail_rest) =
+            parse_write_expr_list_tail(expression_rest);
+
+        if let Some(write_expression_list_tail_node) = write_expression_list_tail {
+            (
+                Some(ParserNode::new(
+                    vec![expression_node, write_expression_list_tail_node],
+                    ParserNodeType::WriteExpressionList,
+                )),
+                write_expression_list_tail_rest,
+            )
+        } else {
+            (
+                Some(ParserNode::new(
+                    vec![expression_node],
+                    ParserNodeType::WriteExpressionList,
+                )),
+                expression_rest,
+            )
+        }
+    } else {
+        handle_syntax_error(tokens, "Expression");
+        unreachable!();
+    }
+}
+
+/// Comma Expression WriteExpressionListTail | ε
+fn parse_write_expr_list_tail<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
+    if tokens.len() == 0 {
+        return (None, tokens);
+    }
+
+    return match &tokens[0].token_type {
+        TokenType::Comma => {
+            let (expression, expression_rest) = parse_expression(&tokens[1..]);
+
+            if let Some(expression_node) = expression {
+                let (expr_list_tail, expr_list_tail_rest) =
+                    parse_write_expr_list_tail(expression_rest);
+
+                if let Some(expr_list_tail_node) = expr_list_tail {
+                    (
+                        Some(ParserNode::new(
+                            vec![expression_node, expr_list_tail_node],
+                            ParserNodeType::WriteExpressionListTail,
+                        )),
+                        expr_list_tail_rest,
+                    )
+                } else {
+                    (
+                        Some(ParserNode::new(
+                            vec![expression_node],
+                            ParserNodeType::WriteExpressionListTail,
+                        )),
+                        expression_rest,
+                    )
+                }
+            } else {
+                handle_syntax_error(&tokens[1..], "Expression");
+                unreachable!();
+            }
+        }
+        _ => (None, tokens),
+    };
+}
+
 /// Expression -> Term ExpressionTail
 fn parse_expression<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
     let (term, term_rest) = parse_term(tokens);

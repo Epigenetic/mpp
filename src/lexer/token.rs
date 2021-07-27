@@ -48,6 +48,13 @@ pub enum TokenType {
     Power,
     LParen,
     RParen,
+    Comma,
+    Reserved(ReservedToken),
+}
+
+#[derive(PartialEq, Debug)]
+pub enum ReservedToken {
+    Write,
 }
 
 impl fmt::Display for TokenType {

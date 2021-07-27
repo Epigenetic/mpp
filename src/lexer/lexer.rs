@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
+use crate::lexer::token::ReservedToken;
 use crate::lexer::{Token, TokenType};
 
 pub struct Tokenizer {
@@ -104,6 +105,20 @@ impl Tokenizer {
                     ));
                     self.position += 1
                 }
+                ',' => {
+                    tokens.push(Token::new(
+                        TokenType::Comma,
+                        self.position,
+                        self.position,
+                        &self.input[self.position..self.position + 1],
+                    ));
+                    self.position += 1
+                }
+                'w' | 'W' => {
+                    let (token, size) = tokenize_write(&self.input[self.position..], self.position);
+                    tokens.push(token);
+                    self.position += size;
+                }
                 '0'..='9' => {
                     let (token, size) =
                         tokenize_number(&self.input[self.position..], self.position);
@@ -195,6 +210,38 @@ fn tokenize_string(input: &str, position: usize) -> (Token, usize) {
         ),
         end,
     );
+}
+
+fn tokenize_write(input: &str, position: usize) -> (Token, usize) {
+    let str_array: Vec<char> = input.chars().collect();
+    //One character write command (w or W)
+    if str_array[1].is_whitespace() {
+        return (
+            Token::new(
+                TokenType::Reserved(ReservedToken::Write),
+                position,
+                position + 1,
+                &input[0..1],
+            ),
+            1,
+        );
+    }
+
+    // Full write command
+    if &input[..5] == "write" || &input[..5] == "WRITE" {
+        return (
+            Token::new(
+                TokenType::Reserved(ReservedToken::Write),
+                position + 0,
+                position + 5,
+                &input[..5],
+            ),
+            5,
+        );
+    }
+
+    //Identifier
+    todo!()
 }
 
 #[cfg(test)]
