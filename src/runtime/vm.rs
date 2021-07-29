@@ -6,6 +6,10 @@
 
 use crate::runtime::mval::MVal;
 use crate::runtime::Ops;
+use crossterm::cursor::{position, MoveTo};
+use crossterm::terminal::{Clear, ClearType};
+use crossterm::ExecutableCommand;
+use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
 use std::io;
 use std::io::Write;
@@ -149,7 +153,11 @@ impl VM {
     }
 
     fn execute_write_clear_screen(&mut self) {
-        print!("\x1B[2J\x1B[1;1H");
+        stdout()
+            .execute(Clear(ClearType::All))
+            .expect("Unable to clear screen")
+            .execute(MoveTo(0, 0))
+            .expect("Unable to move cursor to 0 0");
         io::stdout().flush().expect("Issue flushing stdout");
         self.program_counter += 1
     }
