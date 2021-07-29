@@ -21,6 +21,7 @@ pub enum Ops {
     Write = 11,
     WriteLine = 12,
     WriteClearScreen = 13,
+    WriteToCol = 14,
 }
 
 impl Ops {
@@ -39,6 +40,7 @@ impl Ops {
             11 => Ops::Write,
             12 => Ops::WriteLine,
             13 => Ops::WriteClearScreen,
+            14 => Ops::WriteToCol,
             _ => panic!("Unrecognized op code"),
         }
     }
@@ -100,6 +102,10 @@ pub fn print_program(program: &Vec<u8>) {
             }
             Ops::WriteClearScreen => {
                 println!("WRITE_CLEAR_SCREEN");
+                index += 1;
+            }
+            Ops::WriteToCol => {
+                println!("WRITE_TO_COL");
                 index += 1;
             }
         }

@@ -123,6 +123,15 @@ impl Tokenizer {
                     ));
                     self.position += 1;
                 }
+                '?' => {
+                    tokens.push(Token::new(
+                        TokenType::QuestionMark,
+                        self.position,
+                        self.position,
+                        &self.input[self.position..self.position + 1],
+                    ));
+                    self.position += 1
+                }
                 'w' | 'W' => {
                     let (token, size) = tokenize_write(&self.input[self.position..], self.position);
                     tokens.push(token);

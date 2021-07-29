@@ -5,7 +5,7 @@
  */
 
 use crate::lexer::{ReservedToken, Token, TokenType};
-use crate::parser::parse_node::{AddOp, MulOp, ParserNode, UnaryOp};
+use crate::parser::parse_node::{AddOp, MulOp, ParserNode, UnaryOp, WriteFormat};
 use crate::parser::ParserNodeType;
 use crate::runtime::MVal;
 
@@ -132,6 +132,7 @@ fn parse_write_expr_list_tail<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &
     };
 }
 
+/// ! | # | ? expression | expression
 fn parse_write_expression<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
     if tokens.len() == 0 {
         return (None, tokens);
@@ -139,8 +140,10 @@ fn parse_write_expression<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [
 
     return match &tokens[0].token_type {
         TokenType::Hash => {
-            let write_clear_screen_node =
-                ParserNode::new(Vec::new(), ParserNodeType::WriteClearScreen);
+            let write_clear_screen_node = ParserNode::new(
+                Vec::new(),
+                ParserNodeType::WriteFormat(WriteFormat::ClearScreen),
+            );
 
             (
                 Some(ParserNode::new(
@@ -151,7 +154,10 @@ fn parse_write_expression<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [
             )
         }
         TokenType::Bang => {
-            let write_new_line_node = ParserNode::new(Vec::new(), ParserNodeType::WriteNewLine);
+            let write_new_line_node = ParserNode::new(
+                Vec::new(),
+                ParserNodeType::WriteFormat(WriteFormat::NewLine),
+            );
 
             (
                 Some(ParserNode::new(
@@ -160,6 +166,22 @@ fn parse_write_expression<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [
                 )),
                 &tokens[1..],
             )
+        }
+        TokenType::QuestionMark => {
+            let (expression, expression_rest) = parse_expression(&tokens[1..]);
+
+            return if let Some(expression_node) = expression {
+                (
+                    Some(ParserNode::new(
+                        vec![expression_node],
+                        ParserNodeType::WriteFormat(WriteFormat::ToCol),
+                    )),
+                    expression_rest,
+                )
+            } else {
+                handle_syntax_error(&tokens[1..], "Expression");
+                unreachable!();
+            };
         }
         _ => {
             let (expression, expression_rest) = parse_expression(tokens);

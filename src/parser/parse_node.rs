@@ -33,8 +33,14 @@ impl ParserNode {
                     program.push(Ops::Write as u8);
                 }
             }
-            ParserNodeType::WriteNewLine => program.push(Ops::WriteLine as u8),
-            ParserNodeType::WriteClearScreen => program.push(Ops::WriteClearScreen as u8),
+            ParserNodeType::WriteFormat(format) => match format {
+                WriteFormat::NewLine => program.push(Ops::WriteLine as u8),
+                WriteFormat::ClearScreen => program.push(Ops::WriteClearScreen as u8),
+                WriteFormat::ToCol => {
+                    self.children[0].to_bytes(program);
+                    program.push(Ops::WriteToCol as u8)
+                }
+            },
             ParserNodeType::WriteExpressionList => {
                 // Expression
                 self.children[0].to_bytes(program);
@@ -166,8 +172,7 @@ impl fmt::Display for ParserNode {
         match &self.node_type {
             ParserNodeType::WriteStatement => write!(f, "WriteStatement"),
             ParserNodeType::WriteExpression => write!(f, "WriteExpression"),
-            ParserNodeType::WriteNewLine => write!(f, "WriteNewLine"),
-            ParserNodeType::WriteClearScreen => write!(f, "WriteClearScreen"),
+            ParserNodeType::WriteFormat(format) => write!(f, "WriteFormat: {:?}", format),
             ParserNodeType::WriteExpressionList => write!(f, "WriteExpressionList"),
             ParserNodeType::WriteExpressionListTail => write!(f, "WriteExpressionListTail"),
             ParserNodeType::Expression => write!(f, "Expression"),
@@ -208,8 +213,7 @@ pub enum ParserNodeType {
     WriteExpressionList,
     WriteExpressionListTail,
     WriteExpression,
-    WriteNewLine,
-    WriteClearScreen,
+    WriteFormat(WriteFormat),
 }
 
 #[derive(Debug, PartialEq)]
@@ -231,6 +235,13 @@ pub enum UnaryOp {
     Plus,
     Minus,
     Not,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum WriteFormat {
+    NewLine,
+    ClearScreen,
+    ToCol,
 }
 
 pub fn print_parse_tree(root: &ParserNode) {

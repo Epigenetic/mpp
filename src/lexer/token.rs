@@ -51,6 +51,7 @@ pub enum TokenType {
     Comma,
     Reserved(ReservedToken),
     Bang,
+    QuestionMark,
 }
 
 #[derive(PartialEq, Debug)]

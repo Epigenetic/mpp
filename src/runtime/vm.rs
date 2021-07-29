@@ -12,7 +12,7 @@ use crossterm::ExecutableCommand;
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
 use std::io;
-use std::io::Write;
+use std::io::{stdout, Write};
 
 pub struct VM {
     stack: Vec<MVal>,
@@ -52,6 +52,7 @@ impl VM {
                 Ops::Write => self.execute_write(),
                 Ops::WriteLine => self.execute_write_line(),
                 Ops::WriteClearScreen => self.execute_write_clear_screen(),
+                Ops::WriteToCol => self.execute_write_to_col(),
             }
         }
     }
@@ -159,6 +160,25 @@ impl VM {
             .execute(MoveTo(0, 0))
             .expect("Unable to move cursor to 0 0");
         io::stdout().flush().expect("Issue flushing stdout");
+        self.program_counter += 1
+    }
+
+    fn execute_write_to_col(&mut self) {
+        let (x, y) = position().expect("Unable to read cursor position");
+
+        let col = self
+            .stack
+            .pop()
+            .expect("No operand for write to col")
+            .numeric_interpretation()
+            .to_u16()
+            .unwrap();
+
+        if x < col {
+            stdout()
+                .execute(MoveTo(col, y))
+                .expect(&*format!("Unable to move cursor to {} {} ", col, y));
+        }
         self.program_counter += 1
     }
 }
