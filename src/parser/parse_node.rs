@@ -156,7 +156,7 @@ impl ParserNode {
             }
             ParserNodeType::ExpOp => program.push(Ops::Exp as u8),
             ParserNodeType::Factor => {
-                // NumericLiteral | StringLiteral
+                // NumericLiteral | StringLiteral | ( Expression )
                 //TODO: Handle more complex factors
                 self.children[0].to_bytes(program);
             }
