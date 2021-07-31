@@ -132,56 +132,28 @@ fn parse_write_expr_list_tail<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &
     };
 }
 
-/// ! | # | ? expression | expression
+/// FormatExpression | Expression
 fn parse_write_expression<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
     if tokens.len() == 0 {
         return (None, tokens);
     }
 
     return match &tokens[0].token_type {
-        TokenType::Hash => {
-            let write_clear_screen_node = ParserNode::new(
-                Vec::new(),
-                ParserNodeType::WriteFormat(WriteFormat::ClearScreen),
-            );
+        TokenType::Hash | TokenType::Bang | TokenType::QuestionMark => {
+            let (format_expression, format_expression_rest) = parse_format_expression(tokens);
 
-            (
-                Some(ParserNode::new(
-                    vec![write_clear_screen_node],
-                    ParserNodeType::WriteExpression,
-                )),
-                &tokens[1..],
-            )
-        }
-        TokenType::Bang => {
-            let write_new_line_node = ParserNode::new(
-                Vec::new(),
-                ParserNodeType::WriteFormat(WriteFormat::NewLine),
-            );
-
-            (
-                Some(ParserNode::new(
-                    vec![write_new_line_node],
-                    ParserNodeType::WriteExpression,
-                )),
-                &tokens[1..],
-            )
-        }
-        TokenType::QuestionMark => {
-            let (expression, expression_rest) = parse_expression(&tokens[1..]);
-
-            return if let Some(expression_node) = expression {
+            if let Some(format_expression_node) = format_expression {
                 (
                     Some(ParserNode::new(
-                        vec![expression_node],
-                        ParserNodeType::WriteFormat(WriteFormat::ToCol),
+                        vec![format_expression_node],
+                        ParserNodeType::WriteExpression,
                     )),
-                    expression_rest,
+                    format_expression_rest,
                 )
             } else {
-                handle_syntax_error(&tokens[1..], "Expression");
+                handle_syntax_error(tokens, "FormatExpression");
                 unreachable!();
-            };
+            }
         }
         _ => {
             let (expression, expression_rest) = parse_expression(tokens);
@@ -199,6 +171,129 @@ fn parse_write_expression<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [
                 unreachable!()
             };
         }
+    };
+}
+
+/// HashBangFormat FormatExpressionTail | ε
+fn parse_format_expression<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
+    let (hash_bang_format, hash_bang_format_rest) = parse_hash_bang_format(tokens);
+
+    if let Some(hash_bang_format_node) = hash_bang_format {
+        let (format_expression_tail, format_expression_tail_rest) =
+            parse_format_expression_tail(hash_bang_format_rest);
+
+        if let Some(format_expression_tail_node) = format_expression_tail {
+            (
+                Some(ParserNode::new(
+                    vec![hash_bang_format_node, format_expression_tail_node],
+                    ParserNodeType::FormatExpression,
+                )),
+                format_expression_tail_rest,
+            )
+        } else {
+            (
+                Some(ParserNode::new(
+                    vec![hash_bang_format_node],
+                    ParserNodeType::FormatExpression,
+                )),
+                hash_bang_format_rest,
+            )
+        }
+    } else {
+        (None, tokens)
+    }
+}
+
+/// ( ! | # ) HashBangFormat | ε
+fn parse_hash_bang_format<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
+    if tokens.len() == 0 {
+        return (None, tokens);
+    }
+
+    return match &tokens[0].token_type {
+        TokenType::Bang => {
+            let bang_node = ParserNode::new(
+                Vec::new(),
+                ParserNodeType::WriteFormat(WriteFormat::NewLine),
+            );
+            let (hash_bang_format, hash_bang_format_rest) = parse_hash_bang_format(&tokens[1..]);
+
+            if let Some(hash_bang_format_node) = hash_bang_format {
+                (
+                    Some(ParserNode::new(
+                        vec![bang_node, hash_bang_format_node],
+                        ParserNodeType::HashBangFormat,
+                    )),
+                    hash_bang_format_rest,
+                )
+            } else {
+                (
+                    Some(ParserNode::new(
+                        vec![bang_node],
+                        ParserNodeType::HashBangFormat,
+                    )),
+                    &tokens[1..],
+                )
+            }
+        }
+        TokenType::Hash => {
+            let hash_node = ParserNode::new(
+                Vec::new(),
+                ParserNodeType::WriteFormat(WriteFormat::ClearScreen),
+            );
+            let (hash_bang_format, hash_bang_format_rest) = parse_hash_bang_format(&tokens[1..]);
+
+            if let Some(hash_bang_format_node) = hash_bang_format {
+                (
+                    Some(ParserNode::new(
+                        vec![hash_node, hash_bang_format_node],
+                        ParserNodeType::HashBangFormat,
+                    )),
+                    hash_bang_format_rest,
+                )
+            } else {
+                (
+                    Some(ParserNode::new(
+                        vec![hash_node],
+                        ParserNodeType::HashBangFormat,
+                    )),
+                    &tokens[1..],
+                )
+            }
+        }
+        _ => (None, tokens),
+    };
+}
+
+///  ? Expression | ε
+fn parse_format_expression_tail<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
+    if tokens.len() == 0 {
+        return (None, tokens);
+    }
+
+    return match &tokens[0].token_type {
+        TokenType::QuestionMark => {
+            let (expression, expression_rest) = parse_expression(&tokens[1..]);
+
+            if let Some(expression_node) = expression {
+                let write_to_col_node = ParserNode::new(
+                    vec![expression_node],
+                    ParserNodeType::WriteFormat(WriteFormat::ToCol),
+                );
+
+                (
+                    Some(ParserNode::new(
+                        vec![write_to_col_node],
+                        ParserNodeType::FormatExpressionTail,
+                    )),
+                    expression_rest,
+                )
+            } else {
+                handle_syntax_error(tokens, "Expression");
+                unreachable!();
+            }
+        }
+        _ => (None, tokens),
     };
 }
 

@@ -41,6 +41,30 @@ impl ParserNode {
                     program.push(Ops::WriteToCol as u8)
                 }
             },
+            ParserNodeType::FormatExpression => {
+                // HashBangFormat
+                self.children[0].to_bytes(program);
+
+                //Has a FormatExpressionTail
+                if self.children.len() == 2 {
+                    //FormatExpressionTail
+                    self.children[1].to_bytes(program)
+                }
+            }
+            ParserNodeType::FormatExpressionTail => {
+                // Expression
+                self.children[0].to_bytes(program);
+            }
+            ParserNodeType::HashBangFormat => {
+                // WriteFormat
+                self.children[0].to_bytes(program);
+
+                // Has a HashBangFormat
+                if self.children.len() == 2 {
+                    // HashBangFormat
+                    self.children[1].to_bytes(program);
+                }
+            }
             ParserNodeType::WriteExpressionList => {
                 // Expression
                 self.children[0].to_bytes(program);
@@ -175,6 +199,9 @@ impl fmt::Display for ParserNode {
             ParserNodeType::WriteFormat(format) => write!(f, "WriteFormat: {:?}", format),
             ParserNodeType::WriteExpressionList => write!(f, "WriteExpressionList"),
             ParserNodeType::WriteExpressionListTail => write!(f, "WriteExpressionListTail"),
+            ParserNodeType::FormatExpression => write!(f, "FormatExpression"),
+            ParserNodeType::FormatExpressionTail => write!(f, "FormatExpressionTail"),
+            ParserNodeType::HashBangFormat => write!(f, "HashBangFormat"),
             ParserNodeType::Expression => write!(f, "Expression"),
             ParserNodeType::ExpressionTail => write!(f, "ExpressionTail"),
             ParserNodeType::Term => write!(f, "Term"),
@@ -214,6 +241,9 @@ pub enum ParserNodeType {
     WriteExpressionListTail,
     WriteExpression,
     WriteFormat(WriteFormat),
+    FormatExpression,
+    FormatExpressionTail,
+    HashBangFormat,
 }
 
 #[derive(Debug, PartialEq)]
