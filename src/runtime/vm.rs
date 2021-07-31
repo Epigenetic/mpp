@@ -139,8 +139,6 @@ impl VM {
     }
 
     fn execute_write(&mut self) {
-        //TODO: Update $X and $Y
-
         let operand = self.stack.pop().expect("No operand for write");
 
         print!("{}", operand.string_interpretation());
