@@ -34,7 +34,7 @@ impl Tokenizer {
                     tokens.push(Token::new(
                         TokenType::Plus,
                         self.position,
-                        self.position,
+                        self.position + 1,
                         &self.input[self.position..self.position + 1],
                     ));
                     self.position += 1;
@@ -44,7 +44,7 @@ impl Tokenizer {
                     tokens.push(Token::new(
                         TokenType::Minus,
                         self.position,
-                        self.position,
+                        self.position + 1,
                         &self.input[self.position..self.position + 1],
                     ));
                     self.position += 1;
@@ -55,7 +55,7 @@ impl Tokenizer {
                         tokens.push(Token::new(
                             TokenType::Power,
                             self.position,
-                            self.position,
+                            self.position + 1,
                             &self.input[self.position..self.position + 2],
                         ));
                         self.position += 2;
@@ -64,7 +64,7 @@ impl Tokenizer {
                         tokens.push(Token::new(
                             TokenType::Times,
                             self.position,
-                            self.position,
+                            self.position + 1,
                             &self.input[self.position..self.position + 1],
                         ));
                         self.position += 1;
@@ -75,7 +75,7 @@ impl Tokenizer {
                     tokens.push(Token::new(
                         TokenType::Divide,
                         self.position,
-                        self.position,
+                        self.position + 1,
                         &self.input[self.position..self.position + 1],
                     ));
                     self.position += 1;
@@ -85,7 +85,7 @@ impl Tokenizer {
                     tokens.push(Token::new(
                         TokenType::Hash,
                         self.position,
-                        self.position,
+                        self.position + 1,
                         &self.input[self.position..self.position + 1],
                     ));
                     self.position += 1;
@@ -95,7 +95,7 @@ impl Tokenizer {
                     tokens.push(Token::new(
                         TokenType::IntDivide,
                         self.position,
-                        self.position,
+                        self.position + 1,
                         &self.input[self.position..self.position + 1],
                     ));
                     self.position += 1;
@@ -105,7 +105,7 @@ impl Tokenizer {
                     tokens.push(Token::new(
                         TokenType::LParen,
                         self.position,
-                        self.position,
+                        self.position + 1,
                         &self.input[self.position..self.position + 1],
                     ));
                     self.position += 1;
@@ -115,7 +115,7 @@ impl Tokenizer {
                     tokens.push(Token::new(
                         TokenType::RParen,
                         self.position,
-                        self.position,
+                        self.position + 1,
                         &self.input[self.position..self.position + 1],
                     ));
                     self.position += 1;
@@ -125,7 +125,7 @@ impl Tokenizer {
                     tokens.push(Token::new(
                         TokenType::Comma,
                         self.position,
-                        self.position,
+                        self.position + 1,
                         &self.input[self.position..self.position + 1],
                     ));
                     self.position += 1;
@@ -135,7 +135,7 @@ impl Tokenizer {
                     tokens.push(Token::new(
                         TokenType::Bang,
                         self.position,
-                        self.position,
+                        self.position + 1,
                         &self.input[self.position..self.position + 1],
                     ));
                     self.position += 1;
@@ -145,7 +145,7 @@ impl Tokenizer {
                     tokens.push(Token::new(
                         TokenType::QuestionMark,
                         self.position,
-                        self.position,
+                        self.position + 1,
                         &self.input[self.position..self.position + 1],
                     ));
                     self.position += 1;
@@ -335,7 +335,7 @@ mod tests {
         assert!(tokens.is_ok());
         if let Ok(tokens_ok) = tokens {
             assert_eq!(tokens_ok.len(), 1);
-            assert_eq!(tokens_ok[0], Token::new(TokenType::Plus, 0, 0, "+"));
+            assert_eq!(tokens_ok[0], Token::new(TokenType::Plus, 0, 1, "+"));
         }
     }
 
@@ -349,7 +349,7 @@ mod tests {
         assert!(tokens.is_ok());
         if let Ok(tokens_ok) = tokens {
             assert_eq!(tokens_ok.len(), 1);
-            assert_eq!(tokens_ok[0], Token::new(TokenType::Minus, 0, 0, "-"));
+            assert_eq!(tokens_ok[0], Token::new(TokenType::Minus, 0, 1, "-"));
         }
     }
 
@@ -363,7 +363,7 @@ mod tests {
         assert!(tokens.is_ok());
         if let Ok(tokens_ok) = tokens {
             assert_eq!(tokens_ok.len(), 1);
-            assert_eq!(tokens_ok[0], Token::new(TokenType::Times, 0, 0, "*"));
+            assert_eq!(tokens_ok[0], Token::new(TokenType::Times, 0, 1, "*"));
         }
     }
 
@@ -376,7 +376,7 @@ mod tests {
         assert!(tokens.is_ok());
         if let Ok(tokens_ok) = tokens {
             assert_eq!(tokens_ok.len(), 1);
-            assert_eq!(tokens_ok[0], Token::new(TokenType::Divide, 0, 0, "/"));
+            assert_eq!(tokens_ok[0], Token::new(TokenType::Divide, 0, 1, "/"));
         }
     }
 
@@ -407,7 +407,7 @@ mod tests {
         assert!(tokens.is_ok());
         if let Ok(tokens_ok) = tokens {
             assert_eq!(tokens_ok.len(), 1);
-            assert_eq!(tokens_ok[0], Token::new(TokenType::LParen, 0, 0, "("));
+            assert_eq!(tokens_ok[0], Token::new(TokenType::LParen, 0, 1, "("));
         }
     }
 
@@ -420,7 +420,7 @@ mod tests {
         assert!(tokens.is_ok());
         if let Ok(tokens_ok) = tokens {
             assert_eq!(tokens_ok.len(), 1);
-            assert_eq!(tokens_ok[0], Token::new(TokenType::RParen, 0, 0, ")"));
+            assert_eq!(tokens_ok[0], Token::new(TokenType::RParen, 0, 1, ")"));
         }
     }
 
