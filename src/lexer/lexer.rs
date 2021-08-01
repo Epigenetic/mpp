@@ -286,7 +286,7 @@ fn tokenize_string(input: &str, position: usize) -> Result<(Token, usize), Token
 fn tokenize_write(input: &str, position: usize) -> (Token, usize) {
     let str_array: Vec<char> = input.chars().collect();
     //One character write command (w or W)
-    if str_array[1].is_whitespace() {
+    if str_array.len() == 1 || str_array[1].is_whitespace() {
         return (
             Token::new(
                 TokenType::Reserved(ReservedToken::Write),
@@ -421,6 +421,70 @@ mod tests {
         if let Ok(tokens_ok) = tokens {
             assert_eq!(tokens_ok.len(), 1);
             assert_eq!(tokens_ok[0], Token::new(TokenType::RParen, 0, 0, ")"));
+        }
+    }
+
+    #[test]
+    fn test_lex_write_short() {
+        let input = "w";
+        let mut tokenizer = Tokenizer::new(input.to_string());
+        let tokens = tokenizer.tokenize();
+
+        assert!(tokens.is_ok());
+        if let Ok(tokens_ok) = tokens {
+            assert_eq!(tokens_ok.len(), 1);
+            assert_eq!(
+                tokens_ok[0],
+                Token::new(TokenType::Reserved(ReservedToken::Write), 0, 1, "w")
+            )
+        }
+    }
+
+    #[test]
+    fn test_lex_write_short_cap() {
+        let input = "W";
+        let mut tokenizer = Tokenizer::new(input.to_string());
+        let tokens = tokenizer.tokenize();
+
+        assert!(tokens.is_ok());
+        if let Ok(tokens_ok) = tokens {
+            assert_eq!(tokens_ok.len(), 1);
+            assert_eq!(
+                tokens_ok[0],
+                Token::new(TokenType::Reserved(ReservedToken::Write), 0, 1, "W")
+            )
+        }
+    }
+
+    #[test]
+    fn test_lex_write_long() {
+        let input = "write";
+        let mut tokenizer = Tokenizer::new(input.to_string());
+        let tokens = tokenizer.tokenize();
+
+        assert!(tokens.is_ok());
+        if let Ok(tokens_ok) = tokens {
+            assert_eq!(tokens_ok.len(), 1);
+            assert_eq!(
+                tokens_ok[0],
+                Token::new(TokenType::Reserved(ReservedToken::Write), 0, 5, "write")
+            )
+        }
+    }
+
+    #[test]
+    fn test_lex_write_long_cap() {
+        let input = "WRITE";
+        let mut tokenizer = Tokenizer::new(input.to_string());
+        let tokens = tokenizer.tokenize();
+
+        assert!(tokens.is_ok());
+        if let Ok(tokens_ok) = tokens {
+            assert_eq!(tokens_ok.len(), 1);
+            assert_eq!(
+                tokens_ok[0],
+                Token::new(TokenType::Reserved(ReservedToken::Write), 0, 5, "WRITE")
+            )
         }
     }
 }
