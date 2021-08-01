@@ -7,6 +7,7 @@
 mod lexer;
 mod token;
 
+pub use lexer::print_tokenize_error;
 pub use lexer::Tokenizer;
 pub use token::ReservedToken;
 pub use token::Token;

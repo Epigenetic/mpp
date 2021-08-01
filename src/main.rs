@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
+use crate::lexer::print_tokenize_error;
 use crate::runtime::print_program;
 use crate::runtime::vm::VM;
 use crate::Flags::{ExecutionOutput, LexerOutput, ParserOutput, PrintProgram, Test};
@@ -51,32 +52,41 @@ fn main() {
 }
 
 fn execute_line(input: String, flags: &Vec<Flags>) {
+    let input_copy = input.clone();
     let mut tokenizer = lexer::Tokenizer::new(input);
     let tokens = tokenizer.tokenize();
 
-    if flags.contains(&LexerOutput) {
-        for token in &tokens {
-            println!("{}", token);
+    match tokens {
+        Ok(tokens) => {
+            if flags.contains(&LexerOutput) {
+                for token in &tokens {
+                    println!("{}", token);
+                }
+            }
+
+            let parser = parser::Parser::new(tokens);
+            let parse_tree = parser.parse();
+            match parse_tree {
+                None => (),
+                Some(root) => {
+                    if flags.contains(&ParserOutput) {
+                        parser::print_parse_tree(&root);
+                    }
+                    let mut program: Vec<u8> = Vec::new();
+                    root.to_bytes(&mut program);
+                    if flags.contains(&PrintProgram) {
+                        println!("{:?}", program);
+                        print_program(&program);
+                    }
+
+                    let mut vm = VM::new(program, flags.contains(&ExecutionOutput));
+                    vm.execute();
+                }
+            }
         }
-    }
-
-    let parser = parser::Parser::new(tokens);
-    let parse_tree = parser.parse();
-    match parse_tree {
-        None => println!("Parse unsuccessful"),
-        Some(root) => {
-            if flags.contains(&ParserOutput) {
-                parser::print_parse_tree(&root);
-            }
-            let mut program: Vec<u8> = Vec::new();
-            root.to_bytes(&mut program);
-            if flags.contains(&PrintProgram) {
-                println!("{:?}", program);
-                print_program(&program);
-            }
-
-            let mut vm = VM::new(program, flags.contains(&ExecutionOutput));
-            vm.execute();
+        Err(error) => {
+            print_tokenize_error(error, &input_copy);
+            return;
         }
     }
 }
