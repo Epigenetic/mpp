@@ -52,3 +52,52 @@ fn execute_test(test: &str) {
         ),
     }
 }
+
+pub fn run_error_test(file_name: &str) {
+    let path = Path::new(file_name);
+    let mut test_file = match File::open(&path) {
+        Err(e) => panic!("Unable to open file {}: {}", file_name, e),
+        Ok(file) => file,
+    };
+
+    let mut test_content = String::new();
+    if let Err(e) = test_file.read_to_string(&mut test_content) {
+        panic!("Unable to read file {}: {}", file_name, e)
+    }
+
+    let lines: Vec<&str> = test_content.lines().collect();
+    let mut index = 0;
+    while index < lines.len() {
+        if lines[index].len() == 0 || lines[index].starts_with(";;") {
+            index += 1;
+            continue;
+        }
+        let mut expected = String::from("");
+        let mut offset = 1;
+        while index + offset < lines.len() && lines[index + offset].starts_with(";;;") {
+            if expected.len() > 0 {
+                expected.push('\n');
+            }
+            expected.push_str(lines[index + offset].strip_prefix(";;;").unwrap());
+            offset += 1;
+        }
+        expected.push('\n');
+        execute_error_test(lines[index], expected);
+        index += offset;
+    }
+
+    fn execute_error_test(test: &str, expected: String) {
+        let mut test_string = String::from(test);
+        test_string.push('\n');
+        let mut command = Command::new(format!("./target/debug/mpp{}", env::consts::EXE_SUFFIX));
+        command.arg("-r").arg(test_string);
+        println!("Test: {}", test);
+        match command.output() {
+            Err(e) => panic!("Error running compiler: {}", e),
+            Ok(output) => assert_eq!(
+                str::from_utf8(&output.stderr).expect("unable to parse output to string"),
+                expected
+            ),
+        }
+    }
+}

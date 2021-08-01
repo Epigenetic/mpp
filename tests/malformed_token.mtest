@@ -1,0 +1,11 @@
+;; Test catch unterminated string
+w "foo
+;;;0:5
+;;;w "foo
+;;;     ^ Did not find closing quotation mark
+
+;; Test catch unrecognized token pattern
+w `
+;;;0:2
+;;;w `
+;;;  ^ Unrecognized token pattern
