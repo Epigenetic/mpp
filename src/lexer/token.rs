@@ -11,15 +11,17 @@ pub struct Token<'a> {
     pub token_type: TokenType,
     pub start: usize,
     pub end: usize,
+    pub line: usize,
     pub value: &'a str,
 }
 
 impl Token<'_> {
-    pub fn new(token_type: TokenType, start: usize, end: usize, value: &str) -> Token {
+    pub fn new(token_type: TokenType, start: usize, end: usize, line: usize, value: &str) -> Token {
         Token {
             token_type,
             start,
             end,
+            line,
             value,
         }
     }
