@@ -1,0 +1,50 @@
+;;w 1"foo"1 //TODO Enable this test, currently passes by not parsing "foo"1, when we parse multiple statements, then it should fail
+
+;; Missing operand tests
+w +
+;;;0:2
+;;;w +
+;;;  ^ Unexpected end of line. Missing operand.
+
+
+w 1+
+;;;0:3
+;;;w 1+
+;;;   ^ Unexpected end of line. Missing operand.
+
+w -
+;;;0:2
+;;;w -
+;;;  ^ Unexpected end of line. Missing operand.
+
+w 1*
+;;;0:3
+;;;w 1*
+;;;   ^ Unexpected end of line. Missing operand.
+
+w 1/
+;;;0:3
+;;;w 1/
+;;;   ^ Unexpected end of line. Missing operand.
+
+w 1\
+;;;0:3
+;;;w 1\
+;;;   ^ Unexpected end of line. Missing operand.
+
+w 1**
+;;;0:4
+;;;w 1**
+;;;    ^ Unexpected end of line. Missing operand.
+
+;; Test handling no closing parenthesis
+w (1+2
+;;;0:5
+;;;w (1+2
+;;;     ^ Unexpected end of line. Missing closing parenthesis.
+
+;; Write with no operand
+w
+;;;0:0
+;;;w
+;;;^ Unexpected end of line. Operand for write expected.
