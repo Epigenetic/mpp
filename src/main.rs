@@ -5,6 +5,7 @@
  */
 
 use crate::lexer::print_tokenize_error;
+use crate::parser::print_parse_error;
 use crate::runtime::print_program;
 use crate::runtime::vm::VM;
 use crate::Flags::{ExecutionOutput, LexerOutput, ParserOutput, PrintProgram, Test};
@@ -65,23 +66,25 @@ fn execute_line(input: String, flags: &Vec<Flags>) {
             }
 
             let parser = parser::Parser::new(tokens);
-            let parse_tree = parser.parse();
-            match parse_tree {
-                None => (),
-                Some(root) => {
-                    if flags.contains(&ParserOutput) {
-                        parser::print_parse_tree(&root);
-                    }
-                    let mut program: Vec<u8> = Vec::new();
-                    root.to_bytes(&mut program);
-                    if flags.contains(&PrintProgram) {
-                        println!("{:?}", program);
-                        print_program(&program);
-                    }
+            match parser.parse() {
+                Err(error) => print_parse_error(input_copy, error),
+                Ok(parse_tree) => match parse_tree {
+                    None => (),
+                    Some(root) => {
+                        if flags.contains(&ParserOutput) {
+                            parser::print_parse_tree(&root);
+                        }
+                        let mut program: Vec<u8> = Vec::new();
+                        root.to_bytes(&mut program);
+                        if flags.contains(&PrintProgram) {
+                            println!("{:?}", program);
+                            print_program(&program);
+                        }
 
-                    let mut vm = VM::new(program, flags.contains(&ExecutionOutput));
-                    vm.execute();
-                }
+                        let mut vm = VM::new(program, flags.contains(&ExecutionOutput));
+                        vm.execute();
+                    }
+                },
             }
         }
         Err(error) => {
@@ -93,15 +96,15 @@ fn execute_line(input: String, flags: &Vec<Flags>) {
 
 fn parse_args<'a>(args: &Vec<String>) -> Vec<Flags> {
     let mut flags: Vec<Flags> = Vec::new();
-    let mut i = 1;
+    let mut i = 0;
     while i < args[1..].len() {
-        match &args[i][0..] {
+        match &args[i + 1][0..] {
             "--lexer" | "-l" => flags.push(LexerOutput),
             "--parser" | "-p" => flags.push(ParserOutput),
             "--program" | "-P" => flags.push(PrintProgram),
             "--execution" | "-e" => flags.push(ExecutionOutput),
             "--run" | "-r" => {
-                flags.push(Test(i + 1));
+                flags.push(Test(i + 2));
                 i += 1
             }
             _ => panic!("Unrecognized argument {}", args[i]),
@@ -112,7 +115,7 @@ fn parse_args<'a>(args: &Vec<String>) -> Vec<Flags> {
     return flags;
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 enum Flags {
     LexerOutput,
     ParserOutput,

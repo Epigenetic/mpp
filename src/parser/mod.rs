@@ -4,10 +4,11 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
-mod parser;
 mod parse_node;
+mod parser;
 
-pub use parser::Parser;
 pub use parse_node::print_parse_tree;
 pub use parse_node::ParserNode;
 pub use parse_node::ParserNodeType;
+pub use parser::print_parse_error;
+pub use parser::Parser;
