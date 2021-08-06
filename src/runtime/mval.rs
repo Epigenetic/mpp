@@ -18,6 +18,8 @@ pub struct MVal {
 }
 
 impl MVal {
+    pub const DECIMAL_PRECISION: usize = 10;
+
     pub fn new() -> MVal {
         MVal {
             value: None,
@@ -149,7 +151,43 @@ impl MVal {
     pub fn exponent(&self, rhs: Self) -> Self {
         let lhs_double = self.numeric_interpretation().to_f64().unwrap();
         let rhs_double = rhs.numeric_interpretation().to_f64().unwrap();
-        return MVal::from_string_no_sanitize(f64::powf(lhs_double, rhs_double).to_string());
+        let result = f64::powf(lhs_double, rhs_double).to_string();
+
+        return MVal::from_string_no_sanitize(self.clean_float(result));
+    }
+
+    fn clean_float(&self, value: String) -> String {
+        let mut decimal_points = 0;
+        let mut pre_decimal_points = 0;
+        let mut found_decimal_point = false;
+        for char in value.chars() {
+            if char == '.' {
+                found_decimal_point = true;
+                continue;
+            }
+
+            if !found_decimal_point {
+                pre_decimal_points += 1;
+                continue;
+            }
+
+            decimal_points += 1;
+        }
+
+        if decimal_points < MVal::DECIMAL_PRECISION {
+            return value;
+        }
+
+        let chars: Vec<char> = value.chars().collect();
+        let last_digit = chars[MVal::DECIMAL_PRECISION + pre_decimal_points + 1];
+
+        if last_digit < '5' && last_digit >= '0' {
+            return self
+                .trim_trailing_zeros(&value[..pre_decimal_points + 1 + MVal::DECIMAL_PRECISION])
+                .to_string();
+        } else {
+            todo!("Handle rounding up")
+        }
     }
 
     fn trim_trailing_zeros<'a>(&self, value: &'a str) -> &'a str {
