@@ -118,7 +118,7 @@ impl MVal {
     pub fn string_interpretation(&self) -> &str {
         match &self.value {
             None => "",
-            Some(value) => &value,
+            Some(value) => self.trim_leading_zeroes(self.trim_trailing_zeros(&value)),
         }
     }
 
@@ -150,6 +150,52 @@ impl MVal {
         let lhs_double = self.numeric_interpretation().to_f64().unwrap();
         let rhs_double = rhs.numeric_interpretation().to_f64().unwrap();
         return MVal::from_string_no_sanitize(f64::powf(lhs_double, rhs_double).to_string());
+    }
+
+    fn trim_trailing_zeros<'a>(&self, value: &'a str) -> &'a str {
+        let mut trailing_zeroes = 0;
+        let mut found_decimal_point = false;
+        let mut counted_trailing_zeroes = false;
+        for char in value.chars().rev() {
+            if char == '.' {
+                found_decimal_point = true;
+                break;
+            }
+
+            if !counted_trailing_zeroes && char == '0' {
+                trailing_zeroes += 1;
+                continue;
+            } else {
+                counted_trailing_zeroes = true;
+            }
+        }
+
+        if found_decimal_point {
+            return if counted_trailing_zeroes {
+                &value[..value.len() - trailing_zeroes]
+            } else {
+                &value[..value.len() - trailing_zeroes - 1]
+            };
+        }
+        return value;
+    }
+
+    fn trim_leading_zeroes<'a>(&self, value: &'a str) -> &'a str {
+        let mut leading_zeroes = 0;
+
+        // 0 is a special case, don't actually trim anything
+        if value == "0" {
+            return value;
+        }
+
+        for char in value.chars() {
+            if char == '0' {
+                leading_zeroes += 1;
+            }
+            break;
+        }
+
+        return &value[leading_zeroes..];
     }
 
     /// Extract the leading number from an MVal's value.
