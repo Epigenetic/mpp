@@ -209,6 +209,17 @@ impl Tokenizer {
                         self.row += 1;
                     }
                 }
+                '\'' => {
+                    tokens.push(Token::new(
+                        TokenType::Not,
+                        self.position,
+                        self.position + 1,
+                        self.line,
+                        &self.input[self.position..self.position + 1],
+                    ));
+                    self.position += 1;
+                    self.row += 1;
+                }
                 'w' | 'W' => {
                     let (token, size) =
                         tokenize_write(&self.input[self.position..], self.position, self.line);

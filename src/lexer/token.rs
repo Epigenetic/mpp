@@ -58,6 +58,7 @@ pub enum TokenType {
     GreaterThanOrEqualTo,
     GreaterThan,
     LessThan,
+    Not,
 }
 
 #[derive(PartialEq, Debug)]
