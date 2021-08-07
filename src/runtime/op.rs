@@ -22,6 +22,10 @@ pub enum Ops {
     WriteLine = 12,
     WriteClearScreen = 13,
     WriteToCol = 14,
+    LessThan = 15,
+    GreaterThan = 16,
+    LessThanOrEqualTo = 17,
+    GreaterThanOrEqualTo = 18,
 }
 
 impl Ops {
@@ -41,6 +45,10 @@ impl Ops {
             12 => Ops::WriteLine,
             13 => Ops::WriteClearScreen,
             14 => Ops::WriteToCol,
+            15 => Ops::LessThan,
+            16 => Ops::GreaterThan,
+            17 => Ops::LessThanOrEqualTo,
+            18 => Ops::GreaterThanOrEqualTo,
             _ => panic!("Unrecognized op code"),
         }
     }
@@ -106,6 +114,22 @@ pub fn print_program(program: &Vec<u8>) {
             }
             Ops::WriteToCol => {
                 println!("WRITE_TO_COL");
+                index += 1;
+            }
+            Ops::LessThan => {
+                println!("GREATER_THAN");
+                index += 1;
+            }
+            Ops::GreaterThan => {
+                println!("LESS_THAN");
+                index += 1;
+            }
+            Ops::LessThanOrEqualTo => {
+                println!("LESS_THAN_OR_EQUAL_TO");
+                index += 1;
+            }
+            Ops::GreaterThanOrEqualTo => {
+                println!("GREATER_THAN_OR_EQUAL_TO");
                 index += 1;
             }
         }

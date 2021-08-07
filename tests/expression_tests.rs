@@ -25,6 +25,11 @@ fn test_order_of_operations() {
 }
 
 #[test]
+fn test_relational_expression() {
+    run_tests("tests/expression_tests/relational_expression.mtest")
+}
+
+#[test]
 fn test_malformed_expression() {
     run_error_test("tests/expression_tests/malformed_expression.mtest")
 }

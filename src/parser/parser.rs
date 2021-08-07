@@ -5,7 +5,7 @@
  */
 
 use crate::lexer::{ReservedToken, Token, TokenType};
-use crate::parser::parse_node::{AddOp, MulOp, ParserNode, UnaryOp, WriteFormat};
+use crate::parser::parse_node::{AddOp, MulOp, ParserNode, RelOp, UnaryOp, WriteFormat};
 use crate::parser::ParserNodeType;
 use crate::runtime::MVal;
 
@@ -166,7 +166,7 @@ fn parse_write_expr_list_tail<'a>(
     };
 }
 
-/// FormatExpression | Expression | ε
+/// FormatExpression | RelationalExpression | ε
 fn parse_write_expression<'a>(
     tokens: &'a [Token],
 ) -> Result<(Option<ParserNode>, &'a [Token<'a>]), ParseError<'a>> {
@@ -191,15 +191,16 @@ fn parse_write_expression<'a>(
             }
         }
         _ => {
-            let (expression, expression_rest) = parse_expression(tokens)?;
+            let (relational_expression, relational_expression_rest) =
+                parse_relational_expression(tokens)?;
 
-            return if let Some(expression_node) = expression {
+            return if let Some(expression_node) = relational_expression {
                 Ok((
                     Some(ParserNode::new(
                         vec![expression_node],
                         ParserNodeType::WriteExpression,
                     )),
-                    expression_rest,
+                    relational_expression_rest,
                 ))
             } else {
                 unreachable!("Expression cannot go to epsilon")
@@ -301,7 +302,7 @@ fn parse_hash_bang_format<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [
     };
 }
 
-///  ? Expression | ε
+///  ? RelationalExpression | ε
 fn parse_format_expression_tail<'a>(
     tokens: &'a [Token],
 ) -> Result<(Option<ParserNode>, &'a [Token<'a>]), ParseError<'a>> {
@@ -311,9 +312,10 @@ fn parse_format_expression_tail<'a>(
 
     return match &tokens[0].token_type {
         TokenType::QuestionMark => {
-            let (expression, expression_rest) = parse_expression(&tokens[1..])?;
+            let (relational_expression, relational_expression_rest) =
+                parse_relational_expression(&tokens[1..])?;
 
-            if let Some(expression_node) = expression {
+            if let Some(expression_node) = relational_expression {
                 let write_to_col_node = ParserNode::new(
                     vec![expression_node],
                     ParserNodeType::WriteFormat(WriteFormat::ToCol),
@@ -324,12 +326,110 @@ fn parse_format_expression_tail<'a>(
                         vec![write_to_col_node],
                         ParserNodeType::FormatExpressionTail,
                     )),
-                    expression_rest,
+                    relational_expression_rest,
                 ))
             } else {
                 unreachable!("Expression can not go to epsilon");
             }
         }
+        _ => Ok((None, tokens)),
+    };
+}
+
+/// RelationalExpression -> Expression RelationalExpressionTail
+fn parse_relational_expression<'a>(
+    tokens: &'a [Token],
+) -> Result<(Option<ParserNode>, &'a [Token<'a>]), ParseError<'a>> {
+    let (expression, expression_rest) = parse_expression(tokens)?;
+
+    return if let Some(expression_node) = expression {
+        let (relational_expression_tail, relational_expression_rest) =
+            parse_relational_expression_tail(expression_rest)?;
+
+        if let Some(relational_expression_tail_node) = relational_expression_tail {
+            Ok((
+                Some(ParserNode::new(
+                    vec![expression_node, relational_expression_tail_node],
+                    ParserNodeType::RelationalExpression,
+                )),
+                relational_expression_rest,
+            ))
+        } else {
+            Ok((
+                Some(ParserNode::new(
+                    vec![expression_node],
+                    ParserNodeType::RelationalExpression,
+                )),
+                expression_rest,
+            ))
+        }
+    } else {
+        unreachable!("Expression cannot go to epsilon")
+    };
+}
+
+/// RelationalExpressionTail -> RelOp RelationalExpressionTail | ε
+fn parse_relational_expression_tail<'a>(
+    tokens: &'a [Token],
+) -> Result<(Option<ParserNode>, &'a [Token<'a>]), ParseError<'a>> {
+    let (rel_op, rel_op_rest) = parse_rel_op(tokens)?;
+
+    return if let Some(rel_op_node) = rel_op {
+        let (expression, expression_rest) = parse_expression(rel_op_rest)?;
+
+        if let Some(expression_node) = expression {
+            Ok((
+                Some(ParserNode::new(
+                    vec![rel_op_node, expression_node],
+                    ParserNodeType::RelationalExpressionTail,
+                )),
+                expression_rest,
+            ))
+        } else {
+            unreachable!("Expression cannot go to epsilon")
+        }
+    } else {
+        return Ok((None, tokens));
+    };
+}
+
+/// RelOp -> > | < | >= | <= | ε
+fn parse_rel_op<'a>(
+    tokens: &'a [Token],
+) -> Result<(Option<ParserNode>, &'a [Token<'a>]), ParseError<'a>> {
+    if tokens.len() == 0 {
+        return Ok((None, tokens));
+    }
+
+    return match tokens[0].token_type {
+        TokenType::GreaterThan => Ok((
+            Some(ParserNode::new(
+                Vec::new(),
+                ParserNodeType::RelOp(RelOp::GreaterThan),
+            )),
+            &tokens[1..],
+        )),
+        TokenType::LessThan => Ok((
+            Some(ParserNode::new(
+                Vec::new(),
+                ParserNodeType::RelOp(RelOp::LessThan),
+            )),
+            &tokens[1..],
+        )),
+        TokenType::GreaterThanOrEqualTo => Ok((
+            Some(ParserNode::new(
+                Vec::new(),
+                ParserNodeType::RelOp(RelOp::GreaterThanOrEqualTo),
+            )),
+            &tokens[1..],
+        )),
+        TokenType::LessThanOrEqualTo => Ok((
+            Some(ParserNode::new(
+                Vec::new(),
+                ParserNodeType::RelOp(RelOp::LessThanOrEqualTo),
+            )),
+            &tokens[1..],
+        )),
         _ => Ok((None, tokens)),
     };
 }
@@ -707,7 +807,7 @@ fn parse_factor<'a>(
 
         // ( expression )
         TokenType::LParen => {
-            let (expression, expression_rest) = parse_expression(&tokens[1..])?;
+            let (expression, expression_rest) = parse_relational_expression(&tokens[1..])?;
             return if let Some(expression_node) = expression {
                 if expression_rest.len() == 0 || expression_rest[0].token_type != TokenType::RParen
                 {

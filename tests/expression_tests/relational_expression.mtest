@@ -1,0 +1,19 @@
+;; Test Less Than
+w 1<1 ; 0
+w 1<2 ; 1
+w 2<1 ; 0
+
+;; Test Greater Than
+w 1>1 ; 0
+w 1>2 ; 0
+w 2>1 ; 1
+
+;; Test Less Than or Equal To
+w 1<=1 ; 1
+w 1<=2 ; 1
+w 2<=1 ; 0
+
+;; Test Greater Than or Equal To
+w 1>=1 ; 1
+w 1>=2 ; 0
+w 2>=1 ; 1

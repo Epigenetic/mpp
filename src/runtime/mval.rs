@@ -156,6 +156,45 @@ impl MVal {
         return MVal::from_string_no_sanitize(self.clean_float(result));
     }
 
+    /// Less than for MVals. Compares the numeric values, outputting 1 if true, 0 if false
+    pub fn less_than(&self, rhs: MVal) -> MVal {
+        let lhs_decimal = self.numeric_interpretation();
+        let rhs_decimal = rhs.numeric_interpretation();
+
+        return MVal::from_string_no_sanitize(
+            if lhs_decimal < rhs_decimal { "1" } else { "0" }.to_string(),
+        );
+    }
+
+    /// Greater than for MVals. Compares the numeric values, outputting 1 if true, 0 if false
+    pub fn greater_than(&self, rhs: MVal) -> MVal {
+        let lhs_decimal = self.numeric_interpretation();
+        let rhs_decimal = rhs.numeric_interpretation();
+
+        return MVal::from_string_no_sanitize(
+            if lhs_decimal > rhs_decimal { "1" } else { "0" }.to_string(),
+        );
+    }
+
+    /// Less than or equal to for MVals. Compares the numeric values, outputting 1 if true, 0 if false
+    pub fn less_than_or_equal_to(&self, rhs: MVal) -> MVal {
+        let lhs_decimal = self.numeric_interpretation();
+        let rhs_decimal = rhs.numeric_interpretation();
+
+        return MVal::from_string_no_sanitize(
+            if lhs_decimal <= rhs_decimal { "1" } else { "0" }.to_string(),
+        );
+    }
+
+    /// Greater than or equal to for MVals. Compares the numeric values, outputting 1 if true, 0 if false
+    pub fn greater_than_or_equal_to(&self, rhs: MVal) -> MVal {
+        let lhs_decimal = self.numeric_interpretation();
+        let rhs_decimal = rhs.numeric_interpretation();
+        return MVal::from_string_no_sanitize(
+            if lhs_decimal >= rhs_decimal { "1" } else { "0" }.to_string(),
+        );
+    }
+
     fn clean_float(&self, value: String) -> String {
         let mut decimal_points = 0;
         let mut pre_decimal_points = 0;

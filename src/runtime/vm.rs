@@ -53,6 +53,10 @@ impl VM {
                 Ops::WriteLine => self.execute_write_line(),
                 Ops::WriteClearScreen => self.execute_write_clear_screen(),
                 Ops::WriteToCol => self.execute_write_to_col(),
+                Ops::LessThan => self.execute_less_than(),
+                Ops::GreaterThan => self.execute_greater_than(),
+                Ops::LessThanOrEqualTo => self.execute_less_than_or_equal_to(),
+                Ops::GreaterThanOrEqualTo => self.execute_greater_than_or_equal_to(),
             }
         }
     }
@@ -178,5 +182,43 @@ impl VM {
                 .expect(&*format!("Unable to move cursor to {} {} ", col, y));
         }
         self.program_counter += 1
+    }
+
+    fn execute_less_than(&mut self) {
+        let rhs = self.stack.pop().expect("No rhs for less than");
+        let lhs = self.stack.pop().expect("No lhs for less than");
+
+        self.stack.push(lhs.less_than(rhs));
+        self.program_counter += 1;
+    }
+
+    fn execute_greater_than(&mut self) {
+        let rhs = self.stack.pop().expect("No rhs for greater than");
+        let lhs = self.stack.pop().expect("No lhs for greater than");
+
+        self.stack.push(lhs.greater_than(rhs));
+        self.program_counter += 1;
+    }
+
+    fn execute_less_than_or_equal_to(&mut self) {
+        let rhs = self.stack.pop().expect("No rhs for less than or equal to");
+        let lhs = self.stack.pop().expect("No lhs for less than or equal to");
+
+        self.stack.push(lhs.less_than_or_equal_to(rhs));
+        self.program_counter += 1;
+    }
+
+    fn execute_greater_than_or_equal_to(&mut self) {
+        let rhs = self
+            .stack
+            .pop()
+            .expect("No rhs for greater than or equal to");
+        let lhs = self
+            .stack
+            .pop()
+            .expect("No lhs for greater than or equal to");
+
+        self.stack.push(lhs.greater_than_or_equal_to(rhs));
+        self.program_counter += 1;
     }
 }
