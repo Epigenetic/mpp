@@ -371,3 +371,77 @@ impl Rem for MVal {
         );
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::runtime::MVal;
+
+    #[test]
+    fn test_add() {
+        let lhs = MVal::from_string_no_sanitize("2".to_string());
+        let rhs = MVal::from_string_no_sanitize("3".to_string());
+
+        assert_eq!(lhs + rhs, MVal::from_string_no_sanitize("5".to_string()))
+    }
+
+    #[test]
+    fn test_sub() {
+        let lhs = MVal::from_string_no_sanitize("2".to_string());
+        let rhs = MVal::from_string_no_sanitize("3".to_string());
+
+        assert_eq!(lhs - rhs, MVal::from_string_no_sanitize("-1".to_string()))
+    }
+
+    #[test]
+    fn test_mult() {
+        let lhs = MVal::from_string_no_sanitize("2".to_string());
+        let rhs = MVal::from_string_no_sanitize("3".to_string());
+
+        assert_eq!(lhs * rhs, MVal::from_string_no_sanitize("6".to_string()))
+    }
+
+    #[test]
+    fn test_div() {
+        let lhs = MVal::from_string_no_sanitize("2".to_string());
+        let rhs = MVal::from_string_no_sanitize("4".to_string());
+
+        /*
+        Not testing MVal itself to avoid leading/trailing zeroes in internal representation
+        causing any issues
+        */
+        assert_eq!((lhs / rhs).string_interpretation(), ".5")
+    }
+
+    #[test]
+    fn test_int_div() {
+        let lhs = MVal::from_string_no_sanitize("2".to_string());
+        let rhs = MVal::from_string_no_sanitize("3".to_string());
+
+        assert_eq!(
+            lhs.integer_divide(rhs),
+            MVal::from_string_no_sanitize("0".to_string())
+        )
+    }
+
+    #[test]
+    fn test_mod() {
+        let lhs = MVal::from_string_no_sanitize("5".to_string());
+        let rhs = MVal::from_string_no_sanitize("3".to_string());
+
+        assert_eq!(
+            lhs.modulo(rhs),
+            MVal::from_string_no_sanitize("2".to_string())
+        )
+    }
+
+    #[test]
+    fn test_power() {
+        let lhs = MVal::from_string_no_sanitize("2".to_string());
+        let rhs = MVal::from_string_no_sanitize("3".to_string());
+
+        assert_eq!(
+            lhs.exponent(rhs),
+            MVal::from_string_no_sanitize("8".to_string())
+        )
+    }
+}
