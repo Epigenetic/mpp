@@ -163,6 +163,52 @@ impl Tokenizer {
                     self.position += 1;
                     self.row += 1
                 }
+                '>' => {
+                    if self.position + 1 < self.input.len() && str_array[self.position + 1] == '=' {
+                        tokens.push(Token::new(
+                            TokenType::GreaterThanOrEqualTo,
+                            self.position,
+                            self.position + 2,
+                            self.line,
+                            &self.input[self.position..self.position + 2],
+                        ));
+                        self.position += 2;
+                        self.row += 2;
+                    } else {
+                        tokens.push(Token::new(
+                            TokenType::GreaterThan,
+                            self.position,
+                            self.position + 1,
+                            self.line,
+                            &self.input[self.position..self.position + 1],
+                        ));
+                        self.position += 1;
+                        self.row += 1;
+                    }
+                }
+                '<' => {
+                    if self.position + 1 < self.input.len() && str_array[self.position + 1] == '=' {
+                        tokens.push(Token::new(
+                            TokenType::LessThanOrEqualTo,
+                            self.position,
+                            self.position + 2,
+                            self.line,
+                            &self.input[self.position..self.position + 2],
+                        ));
+                        self.position += 2;
+                        self.row += 2;
+                    } else {
+                        tokens.push(Token::new(
+                            TokenType::LessThan,
+                            self.position,
+                            self.position + 1,
+                            self.line,
+                            &self.input[self.position..self.position + 1],
+                        ));
+                        self.position += 1;
+                        self.row += 1;
+                    }
+                }
                 'w' | 'W' => {
                     let (token, size) =
                         tokenize_write(&self.input[self.position..], self.position, self.line);
@@ -561,6 +607,67 @@ mod tests {
             assert_eq!(
                 tokens_ok[0],
                 Token::new(TokenType::QuestionMark, 0, 1, 0, "?")
+            )
+        }
+    }
+
+    #[test]
+    fn test_lex_greater_than() {
+        let input = ">";
+        let mut tokenizer = Tokenizer::new(input.to_string());
+        let tokens = tokenizer.tokenize();
+
+        assert!(tokens.is_ok());
+        if let Ok(tokens_ok) = tokens {
+            assert_eq!(tokens_ok.len(), 1);
+            assert_eq!(
+                tokens_ok[0],
+                Token::new(TokenType::GreaterThan, 0, 1, 0, ">")
+            )
+        }
+    }
+
+    #[test]
+    fn test_lex_greater_than_or_equal_to() {
+        let input = ">=";
+        let mut tokenizer = Tokenizer::new(input.to_string());
+        let tokens = tokenizer.tokenize();
+
+        assert!(tokens.is_ok());
+        if let Ok(tokens_ok) = tokens {
+            assert_eq!(tokens_ok.len(), 1);
+            assert_eq!(
+                tokens_ok[0],
+                Token::new(TokenType::GreaterThanOrEqualTo, 0, 2, 0, ">=")
+            )
+        }
+    }
+
+    #[test]
+    fn test_lex_less_than() {
+        let input = "<";
+        let mut tokenizer = Tokenizer::new(input.to_string());
+        let tokens = tokenizer.tokenize();
+
+        assert!(tokens.is_ok());
+        if let Ok(tokens_ok) = tokens {
+            assert_eq!(tokens_ok.len(), 1);
+            assert_eq!(tokens_ok[0], Token::new(TokenType::LessThan, 0, 1, 0, "<"))
+        }
+    }
+
+    #[test]
+    fn test_lex_less_than_or_equal_to() {
+        let input = "<=";
+        let mut tokenizer = Tokenizer::new(input.to_string());
+        let tokens = tokenizer.tokenize();
+
+        assert!(tokens.is_ok());
+        if let Ok(tokens_ok) = tokens {
+            assert_eq!(tokens_ok.len(), 1);
+            assert_eq!(
+                tokens_ok[0],
+                Token::new(TokenType::LessThanOrEqualTo, 0, 2, 0, "<=")
             )
         }
     }

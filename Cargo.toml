@@ -8,4 +8,4 @@ edition = "2018"
 [dependencies]
 rust_decimal = "1.14"
 rust_decimal_macros = "1.14"
-crossterm="0.20.0"
+crossterm = "0.20.0"

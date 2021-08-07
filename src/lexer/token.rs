@@ -54,6 +54,10 @@ pub enum TokenType {
     Reserved(ReservedToken),
     Bang,
     QuestionMark,
+    LessThanOrEqualTo,
+    GreaterThanOrEqualTo,
+    GreaterThan,
+    LessThan,
 }
 
 #[derive(PartialEq, Debug)]
