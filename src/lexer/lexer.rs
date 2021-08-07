@@ -57,7 +57,7 @@ impl Tokenizer {
                         tokens.push(Token::new(
                             TokenType::Power,
                             self.position,
-                            self.position + 1,
+                            self.position + 2,
                             self.line,
                             &self.input[self.position..self.position + 2],
                         ));
@@ -385,6 +385,20 @@ mod tests {
         if let Ok(tokens_ok) = tokens {
             assert_eq!(tokens_ok.len(), 1);
             assert_eq!(tokens_ok[0], Token::new(TokenType::Times, 0, 1, 0, "*"));
+        }
+    }
+
+    #[test]
+    fn test_lex_power() {
+        let input = String::from("**");
+        let mut tokenizer = Tokenizer::new(input);
+
+        let tokens = tokenizer.tokenize();
+
+        assert!(tokens.is_ok());
+        if let Ok(tokens_ok) = tokens {
+            assert_eq!(tokens_ok.len(), 1);
+            assert_eq!(tokens_ok[0], Token::new(TokenType::Power, 0, 2, 0, "**"));
         }
     }
 
