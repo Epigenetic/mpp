@@ -652,7 +652,7 @@ fn parse_unary<'a>(
     };
 }
 
-/// UnaryOp -> + | - | ε
+/// UnaryOp -> + | - | ' | ε
 fn parse_unary_op<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
     if tokens.len() == 0 {
         return (None, tokens);
@@ -670,6 +670,13 @@ fn parse_unary_op<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a
             Some(ParserNode::new(
                 Vec::new(),
                 ParserNodeType::UnaryOp(UnaryOp::Minus),
+            )),
+            &tokens[1..],
+        ),
+        TokenType::Not => (
+            Some(ParserNode::new(
+                Vec::new(),
+                ParserNodeType::UnaryOp(UnaryOp::Not),
             )),
             &tokens[1..],
         ),

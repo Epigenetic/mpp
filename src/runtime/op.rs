@@ -26,6 +26,7 @@ pub enum Ops {
     GreaterThan = 16,
     LessThanOrEqualTo = 17,
     GreaterThanOrEqualTo = 18,
+    Not = 19,
 }
 
 impl Ops {
@@ -49,6 +50,7 @@ impl Ops {
             16 => Ops::GreaterThan,
             17 => Ops::LessThanOrEqualTo,
             18 => Ops::GreaterThanOrEqualTo,
+            19 => Ops::Not,
             _ => panic!("Unrecognized op code"),
         }
     }
@@ -130,6 +132,10 @@ pub fn print_program(program: &Vec<u8>) {
             }
             Ops::GreaterThanOrEqualTo => {
                 println!("GREATER_THAN_OR_EQUAL_TO");
+                index += 1;
+            }
+            Ops::Not => {
+                println!("NOT");
                 index += 1;
             }
         }

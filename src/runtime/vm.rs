@@ -57,6 +57,7 @@ impl VM {
                 Ops::GreaterThan => self.execute_greater_than(),
                 Ops::LessThanOrEqualTo => self.execute_less_than_or_equal_to(),
                 Ops::GreaterThanOrEqualTo => self.execute_greater_than_or_equal_to(),
+                Ops::Not => self.execute_not(),
             }
         }
     }
@@ -219,6 +220,13 @@ impl VM {
             .expect("No lhs for greater than or equal to");
 
         self.stack.push(lhs.greater_than_or_equal_to(rhs));
+        self.program_counter += 1;
+    }
+
+    fn execute_not(&mut self) {
+        let operand = self.stack.pop().expect("No operand for not");
+
+        self.stack.push(operand.not());
         self.program_counter += 1;
     }
 }

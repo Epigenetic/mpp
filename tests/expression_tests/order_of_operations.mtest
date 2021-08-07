@@ -4,6 +4,12 @@ w 3+2**4-5/8 ; 18.375
 w 2*(3+4) ; 14
 w 5\2+5#2 ; 3
 
+;; Test Use of Unary Operators
+w +(2-5) ; -3
+w -(2-5) ; 3
+w -2-5 ; -7
+w -+2*+5 ; -10
+
 ;; Test Relational Operation Order
 w 1+2*3>2**2 ; 1
 w 5\2<5#2 ; 0

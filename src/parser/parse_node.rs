@@ -199,7 +199,7 @@ impl ParserNode {
             ParserNodeType::UnaryOp(op) => match op {
                 UnaryOp::Plus => program.push(Ops::ToNum as u8),
                 UnaryOp::Minus => program.push(Ops::ToNegNum as u8),
-                UnaryOp::Not => todo!(),
+                UnaryOp::Not => program.push(Ops::Not as u8),
             },
             ParserNodeType::NumericLiteral(value) => {
                 program.push(Ops::Push as u8);

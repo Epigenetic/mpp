@@ -30,6 +30,11 @@ fn test_relational_expression() {
 }
 
 #[test]
+fn test_boolean_expression() {
+    run_tests("tests/expression_tests/boolean_expression.mtest")
+}
+
+#[test]
 fn test_malformed_expression() {
     run_error_test("tests/expression_tests/malformed_expression.mtest")
 }

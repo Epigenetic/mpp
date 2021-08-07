@@ -195,6 +195,18 @@ impl MVal {
         );
     }
 
+    /// Not for MVals. If the numeric interpretation is greater than 0
+    pub fn not(&self) -> MVal {
+        return MVal::from_string_no_sanitize(
+            if self.boolean_interpretation() {
+                "0"
+            } else {
+                "1"
+            }
+            .to_string(),
+        );
+    }
+
     fn clean_float(&self, value: String) -> String {
         let mut decimal_points = 0;
         let mut pre_decimal_points = 0;
@@ -443,5 +455,25 @@ mod test {
             lhs.exponent(rhs),
             MVal::from_string_no_sanitize("8".to_string())
         )
+    }
+
+    #[test]
+    fn test_not() {
+        let operand1 = MVal::from_string_no_sanitize("1".to_string());
+        let operand2 = MVal::from_string_no_sanitize("0".to_string());
+        let operand3 = MVal::from_string_no_sanitize("-1".to_string());
+
+        assert_eq!(
+            operand1.not(),
+            MVal::from_string_no_sanitize("0".to_string())
+        );
+        assert_eq!(
+            operand2.not(),
+            MVal::from_string_no_sanitize("1".to_string())
+        );
+        assert_eq!(
+            operand3.not(),
+            MVal::from_string_no_sanitize("0".to_string())
+        );
     }
 }
