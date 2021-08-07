@@ -1,0 +1,5 @@
+;; Test To Numeric
+w +"foo" ; 0
+w +"2foo" ; 2
+w -"2foo" ; -2
+w +"foo2" ; 0

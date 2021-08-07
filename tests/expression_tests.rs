@@ -10,11 +10,21 @@ use test_runner::run_error_test;
 use test_runner::run_tests;
 
 #[test]
-fn test_expressions() {
-    run_tests("tests/expression.mtest")
+fn test_arithmetic() {
+    run_tests("tests/expression_tests/arithmetic.mtest")
+}
+
+#[test]
+fn test_numeric_interpretation() {
+    run_tests("tests/expression_tests/numeric_interpretation.mtest")
+}
+
+#[test]
+fn test_order_of_operations() {
+    run_tests("tests/expression_tests/order_of_operations.mtest")
 }
 
 #[test]
 fn test_malformed_expression() {
-    run_error_test("tests/malformed_expression.mtest")
+    run_error_test("tests/expression_tests/malformed_expression.mtest")
 }
