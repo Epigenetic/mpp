@@ -59,11 +59,15 @@ pub enum TokenType {
     GreaterThan,
     LessThan,
     Not,
+    Equals,
+    Identifier,
 }
 
 #[derive(PartialEq, Debug)]
 pub enum ReservedToken {
     Write,
+    New,
+    Set,
 }
 
 impl fmt::Display for TokenType {

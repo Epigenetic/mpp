@@ -2,10 +2,21 @@
 w "foo
 ;;;0:5
 ;;;w "foo
-;;;     ^ Did not find closing quotation mark
+;;;     ^ Did not find closing quotation mark.
 
 ;; Test catch unrecognized token pattern
 w `
 ;;;0:2
 ;;;w `
-;;;  ^ Unrecognized token pattern
+;;;  ^ Unrecognized token pattern.
+
+;; Test catch bad identifiers
+foo%
+;;;0:3
+;;;foo%
+;;;   ^ Percent can only be the first character in an identifier.
+
+foo`
+;;;0:3
+;;;foo`
+;;;   ^ Illegal character in identifier.
