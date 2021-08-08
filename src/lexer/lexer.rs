@@ -244,7 +244,7 @@ impl Tokenizer {
                         self.position += size;
                         self.row += size;
                     } else {
-                        todo!()
+                        todo!("Lex dots")
                     }
                 }
                 '"' => {
@@ -376,11 +376,13 @@ fn tokenize_write(input: &str, position: usize, line: usize) -> (Token, usize) {
     }
 
     // Full write command
-    if &input[..5] == "write" || &input[..5] == "WRITE" {
+    if (&input[..5] == "write" || &input[..5] == "WRITE")
+        && (str_array.len() == 5 || str_array[5].is_whitespace())
+    {
         return (
             Token::new(
                 TokenType::Reserved(ReservedToken::Write),
-                position + 0,
+                position,
                 position + 5,
                 line,
                 &input[..5],
