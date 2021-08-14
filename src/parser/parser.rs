@@ -214,7 +214,7 @@ fn parse_statement<'a>(
                     new_statement_rest,
                 ))
             } else {
-                unreachable!("NewStatement does not go to epsilon")
+                unreachable!("NewStatement cannot go to epsilon")
             }
         }
         TokenType::Reserved(ReservedToken::Set) => {
@@ -229,7 +229,7 @@ fn parse_statement<'a>(
                     set_statement_rest,
                 ))
             } else {
-                unreachable!("SetStatement does not go to epsilon")
+                unreachable!("SetStatement cannot go to epsilon")
             }
         }
         TokenType::Reserved(ReservedToken::Write) => {
@@ -244,7 +244,7 @@ fn parse_statement<'a>(
                     write_statement_rest,
                 ))
             } else {
-                unreachable!("WriteStatement does not go to epsilon")
+                unreachable!("WriteStatement cannot go to epsilon")
             }
         }
         TokenType::NewLine => Ok((None, tokens)),
@@ -272,7 +272,7 @@ fn parse_new_statement<'a>(
                     identifier_list_rest,
                 ))
             } else {
-                unreachable!("IdentifierList does not go to epsilon")
+                unreachable!("IdentifierList cannot go to epsilon")
             }
         }
         _ => Err(ParseError {
@@ -386,7 +386,7 @@ fn parse_set_statement<'a>(
                     assignment_list_rest,
                 ))
             } else {
-                unreachable!("AssignmentList does not go to epsilon")
+                unreachable!("AssignmentList cannot go to epsilon")
             }
         }
         _ => Err(ParseError {
@@ -424,7 +424,7 @@ fn parse_assignment_list<'a>(
             ))
         }
     } else {
-        unreachable!("RelationalExpression does not go to epsilon")
+        unreachable!("RelationalExpression cannot go to epsilon")
     };
 }
 
@@ -497,7 +497,7 @@ fn parse_assignment_statement<'a>(
                             relational_expression_rest,
                         ))
                     } else {
-                        unreachable!("RelationalExpression does not go to epsilon")
+                        unreachable!("RelationalExpression cannot go to epsilon")
                     }
                 }
                 _ => Err(ParseError {
