@@ -7,6 +7,7 @@
 use crate::runtime::MVal;
 
 #[repr(u8)]
+#[derive(Debug)]
 pub enum Ops {
     Push = 1,
     Add = 2,
@@ -27,6 +28,9 @@ pub enum Ops {
     LessThanOrEqualTo = 17,
     GreaterThanOrEqualTo = 18,
     Not = 19,
+    New = 20,
+    Set = 21,
+    Get = 22,
 }
 
 impl Ops {
@@ -51,7 +55,10 @@ impl Ops {
             17 => Ops::LessThanOrEqualTo,
             18 => Ops::GreaterThanOrEqualTo,
             19 => Ops::Not,
-            _ => panic!("Unrecognized op code"),
+            20 => Ops::New,
+            21 => Ops::Set,
+            22 => Ops::Get,
+            op => panic!("Unrecognized op code {}", op),
         }
     }
 }
@@ -137,6 +144,18 @@ pub fn print_program(program: &Vec<u8>) {
             Ops::Not => {
                 println!("NOT");
                 index += 1;
+            }
+            Ops::New => {
+                println!("NEW");
+                index += 1
+            }
+            Ops::Set => {
+                println!("SET {}", program[index + 1]);
+                index += 1 + std::mem::size_of::<usize>()
+            }
+            Ops::Get => {
+                println!("GET {}", program[index + 1]);
+                index += 1 + std::mem::size_of::<usize>()
             }
         }
     }

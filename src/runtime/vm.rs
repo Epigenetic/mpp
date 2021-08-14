@@ -11,6 +11,7 @@ use crossterm::terminal::{Clear, ClearType};
 use crossterm::ExecutableCommand;
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
+use std::convert::TryInto;
 use std::io;
 use std::io::{stdout, Write};
 
@@ -33,11 +34,13 @@ impl VM {
 
     pub fn execute(&mut self) {
         while self.program_counter < self.program.len() {
-            if self.print_status {
-                println!("PC: {} Stack: {:?}", self.program_counter, self.stack);
-            }
             let op = Ops::from_u8(self.program[self.program_counter]);
-
+            if self.print_status {
+                println!(
+                    "PC: {} Stack: {:?} Op: {:?}",
+                    self.program_counter, self.stack, op
+                );
+            }
             match op {
                 Ops::Push => self.execute_push(),
                 Ops::Add => self.execute_add(),
@@ -58,6 +61,9 @@ impl VM {
                 Ops::LessThanOrEqualTo => self.execute_less_than_or_equal_to(),
                 Ops::GreaterThanOrEqualTo => self.execute_greater_than_or_equal_to(),
                 Ops::Not => self.execute_not(),
+                Ops::New => self.execute_new(),
+                Ops::Set => self.execute_set(),
+                Ops::Get => self.execute_get(),
             }
         }
     }
@@ -228,5 +234,28 @@ impl VM {
 
         self.stack.push(operand.not());
         self.program_counter += 1;
+    }
+
+    fn execute_new(&mut self) {
+        self.stack.push(MVal::new());
+        self.program_counter += 1
+    }
+
+    fn execute_set(&mut self) {
+        let pos_bytes = &self.program
+            [self.program_counter + 1..self.program_counter + 1 + std::mem::size_of::<usize>()];
+        let var_position = usize::from_le_bytes(pos_bytes.try_into().unwrap());
+        let set_to = self.stack.pop().expect("No value to set variable to");
+        self.stack[var_position] = set_to;
+        self.program_counter += 1 + std::mem::size_of::<usize>();
+    }
+
+    fn execute_get(&mut self) {
+        let pos_bytes = &self.program
+            [self.program_counter + 1..self.program_counter + 1 + std::mem::size_of::<usize>()];
+        let var_position = usize::from_le_bytes(pos_bytes.try_into().unwrap());
+        let variable = self.stack[var_position].clone();
+        self.stack.push(variable);
+        self.program_counter += 1 + std::mem::size_of::<usize>();
     }
 }

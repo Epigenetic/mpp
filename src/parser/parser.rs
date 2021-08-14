@@ -18,19 +18,19 @@ impl Parser<'_> {
         Parser { tokens }
     }
 
-    pub fn parse(&self) -> Result<Option<ParserNode>, ParseError> {
+    pub fn parse<'a>(&self) -> Result<Option<ParserNode>, ParseError> {
         if self.tokens.len() == 0 {
             return Ok(None);
         }
 
-        let (expression, expression_rest) = parse_write_statement(&self.tokens)?;
-        if expression_rest.len() != 0 {
+        let (block, line_rest) = parse_block(&self.tokens)?;
+        if line_rest.len() != 0 {
             println!("Warning: not all tokens processed.");
-            for token in expression_rest {
+            for token in line_rest {
                 println!("{}", token);
             }
         }
-        return Ok(expression);
+        return Ok(block);
     }
 }
 
@@ -47,6 +47,7 @@ pub fn print_parse_error(input: String, error: ParseError) {
         eprintln!("^ Unexpected end of line. {}", error.message)
     } else {
         let bad_token = &error.remaining_tokens[0];
+        eprintln!("{}:{}", bad_token.line, bad_token.start);
         let bad_line = lines[bad_token.line];
         eprintln!("{}", bad_line);
         for _ in 0..bad_token.start {
@@ -59,16 +60,464 @@ pub fn print_parse_error(input: String, error: ParseError) {
     }
 }
 
+/// Block -> Lines | ε
+fn parse_block<'a>(
+    tokens: &'a [Token],
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
+    let (lines, lines_rest) = parse_lines(tokens)?;
+
+    if let Some(lines_node) = lines {
+        Ok((
+            Some(ParserNode::new(
+                vec![lines_node],
+                ParserNodeType::Block(None),
+            )),
+            lines_rest,
+        ))
+    } else {
+        Ok((None, lines_rest))
+    }
+}
+
+/// Lines -> Line Lines | ε
+fn parse_lines<'a>(
+    tokens: &'a [Token],
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
+    if tokens.len() == 0 {
+        return Ok((None, tokens));
+    }
+
+    let (line, line_rest) = parse_line(tokens)?;
+
+    return if let Some(line_node) = line {
+        let (lines, lines_rest) = parse_lines(line_rest)?;
+
+        if let Some(lines_node) = lines {
+            Ok((
+                Some(ParserNode::new(
+                    vec![line_node, lines_node],
+                    ParserNodeType::Lines,
+                )),
+                lines_rest,
+            ))
+        } else {
+            Ok((
+                Some(ParserNode::new(vec![line_node], ParserNodeType::Lines)),
+                line_rest,
+            ))
+        }
+    } else {
+        Ok((None, line_rest))
+    };
+}
+
+/// Line -> Statements \n
+fn parse_line<'a>(
+    tokens: &'a [Token],
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
+    let (statement, statement_rest) = parse_statement(tokens)?;
+
+    return if let Some(statement_node) = statement {
+        let (statements, statements_rest) = parse_statements(statement_rest)?;
+
+        if let Some(statements_node) = statements {
+            if statements_rest.len() == 0 || statements_rest[0].token_type != TokenType::NewLine {
+                Err(ParseError {
+                    remaining_tokens: statements_rest,
+                    message: "Expecting end of line.",
+                })
+            } else {
+                Ok((
+                    Some(ParserNode::new(
+                        vec![statement_node, statements_node],
+                        ParserNodeType::Line,
+                    )),
+                    &statements_rest[1..],
+                ))
+            }
+        } else {
+            if statement_rest.len() == 0 || statement_rest[0].token_type != TokenType::NewLine {
+                Err(ParseError {
+                    remaining_tokens: statement_rest,
+                    message: "Expecting end of line.",
+                })
+            } else {
+                Ok((
+                    Some(ParserNode::new(vec![statement_node], ParserNodeType::Line)),
+                    &statement_rest[1..],
+                ))
+            }
+        }
+    } else {
+        if statement_rest.len() == 0 || statement_rest[0].token_type != TokenType::NewLine {
+            Err(ParseError {
+                remaining_tokens: statement_rest,
+                message: "Expecting end of line.",
+            })
+        } else {
+            Ok((None, &tokens[1..]))
+        }
+    };
+}
+
+/// Statements -> Statement Statements | ε
+fn parse_statements<'a>(
+    tokens: &'a [Token],
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
+    let (statement, statement_rest) = parse_statement(tokens)?;
+
+    return if let Some(statement_node) = statement {
+        let (statements, statements_rest) = parse_statements(statement_rest)?;
+
+        if let Some(statements_node) = statements {
+            Ok((
+                Some(ParserNode::new(
+                    vec![statement_node, statements_node],
+                    ParserNodeType::Statements,
+                )),
+                statements_rest,
+            ))
+        } else {
+            Ok((
+                Some(ParserNode::new(
+                    vec![statement_node],
+                    ParserNodeType::Statements,
+                )),
+                statement_rest,
+            ))
+        }
+    } else {
+        Ok((None, tokens))
+    };
+}
+
+/// Statement -> WriteStatement | SetStatement | NewStatement | ε
+fn parse_statement<'a>(
+    tokens: &'a [Token],
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
+    if tokens.len() == 0 {
+        return Ok((None, tokens));
+    }
+
+    return match &tokens[0].token_type {
+        TokenType::Reserved(ReservedToken::New) => {
+            let (new_statement, new_statement_rest) = parse_new_statement(tokens)?;
+
+            if let Some(new_statement_node) = new_statement {
+                Ok((
+                    Some(ParserNode::new(
+                        vec![new_statement_node],
+                        ParserNodeType::Statement,
+                    )),
+                    new_statement_rest,
+                ))
+            } else {
+                unreachable!("NewStatement does not go to epsilon")
+            }
+        }
+        TokenType::Reserved(ReservedToken::Set) => {
+            let (set_statement, set_statement_rest) = parse_set_statement(tokens)?;
+
+            if let Some(set_statement_node) = set_statement {
+                Ok((
+                    Some(ParserNode::new(
+                        vec![set_statement_node],
+                        ParserNodeType::Statement,
+                    )),
+                    set_statement_rest,
+                ))
+            } else {
+                unreachable!("SetStatement does not go to epsilon")
+            }
+        }
+        TokenType::Reserved(ReservedToken::Write) => {
+            let (write_statement, write_statement_rest) = parse_write_statement(tokens)?;
+
+            if let Some(write_statement_node) = write_statement {
+                Ok((
+                    Some(ParserNode::new(
+                        vec![write_statement_node],
+                        ParserNodeType::Statement,
+                    )),
+                    write_statement_rest,
+                ))
+            } else {
+                unreachable!("WriteStatement does not go to epsilon")
+            }
+        }
+        TokenType::NewLine => Ok((None, tokens)),
+        _ => Err(ParseError {
+            remaining_tokens: tokens,
+            message: "Illegal start of statement.",
+        }),
+    };
+}
+
+/// NewStatement -> New IdentifierList
+fn parse_new_statement<'a>(
+    tokens: &'a [Token],
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
+    return match &tokens[0].token_type {
+        TokenType::Reserved(ReservedToken::New) => {
+            let (identifier_list, identifier_list_rest) = parse_identifier_list(&tokens[1..])?;
+
+            if let Some(identifier_list_node) = identifier_list {
+                Ok((
+                    Some(ParserNode::new(
+                        vec![identifier_list_node],
+                        ParserNodeType::NewStatement,
+                    )),
+                    identifier_list_rest,
+                ))
+            } else {
+                unreachable!("IdentifierList does not go to epsilon")
+            }
+        }
+        _ => Err(ParseError {
+            remaining_tokens: tokens,
+            message: "Expected new.",
+        }),
+    };
+}
+
+/// IdentifierList -> Identifier IdentifierListTail
+fn parse_identifier_list<'a>(
+    tokens: &'a [Token],
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
+    if tokens.len() == 0 {
+        return Err(ParseError {
+            remaining_tokens: tokens,
+            message: "Expecting identifier.",
+        });
+    }
+
+    return match &tokens[0].token_type {
+        TokenType::Identifier => {
+            let identifier_node =
+                ParserNode::new(Vec::new(), ParserNodeType::Identifier(tokens[0].value));
+            let (identifier_list_tail, identifier_list_tail_rest) =
+                parse_identifier_list_tail(&tokens[1..])?;
+
+            if let Some(identifier_list_tail_node) = identifier_list_tail {
+                Ok((
+                    Some(ParserNode::new(
+                        vec![identifier_node, identifier_list_tail_node],
+                        ParserNodeType::IdentifierList,
+                    )),
+                    identifier_list_tail_rest,
+                ))
+            } else {
+                Ok((
+                    Some(ParserNode::new(
+                        vec![identifier_node],
+                        ParserNodeType::IdentifierList,
+                    )),
+                    &tokens[1..],
+                ))
+            }
+        }
+        _ => Err(ParseError {
+            remaining_tokens: tokens,
+            message: "Expecting identifier.",
+        }),
+    };
+}
+
+/// IdentifierListTail -> , Identifier IdentifierListTail | ε
+fn parse_identifier_list_tail<'a>(
+    tokens: &'a [Token],
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
+    // Not long enough to have another item
+    if tokens.len() < 2 {
+        return Ok((None, tokens));
+    }
+
+    return match &tokens[0].token_type {
+        TokenType::Comma => match &tokens[1].token_type {
+            TokenType::Identifier => {
+                let identifier_node =
+                    ParserNode::new(Vec::new(), ParserNodeType::Identifier(tokens[1].value));
+                let (identifier_list_tail, identifier_list_tail_rest) =
+                    parse_identifier_list_tail(&tokens[2..])?;
+
+                if let Some(identifier_list_tail_node) = identifier_list_tail {
+                    Ok((
+                        Some(ParserNode::new(
+                            vec![identifier_node, identifier_list_tail_node],
+                            ParserNodeType::IdentifierListTail,
+                        )),
+                        identifier_list_tail_rest,
+                    ))
+                } else {
+                    Ok((
+                        Some(ParserNode::new(
+                            vec![identifier_node],
+                            ParserNodeType::IdentifierListTail,
+                        )),
+                        &tokens[2..],
+                    ))
+                }
+            }
+            _ => Err(ParseError {
+                remaining_tokens: &tokens[1..],
+                message: "Missing variable name.",
+            }),
+        },
+        _ => Ok((None, tokens)),
+    };
+}
+
+/// SetStatement -> Set AssignmentList
+fn parse_set_statement<'a>(
+    tokens: &'a [Token],
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
+    return match &tokens[0].token_type {
+        TokenType::Reserved(ReservedToken::Set) => {
+            let (assignment_list, assignment_list_rest) = parse_assignment_list(&tokens[1..])?;
+
+            if let Some(assignment_list_node) = assignment_list {
+                Ok((
+                    Some(ParserNode::new(
+                        vec![assignment_list_node],
+                        ParserNodeType::SetStatement,
+                    )),
+                    assignment_list_rest,
+                ))
+            } else {
+                unreachable!("AssignmentList does not go to epsilon")
+            }
+        }
+        _ => Err(ParseError {
+            remaining_tokens: tokens,
+            message: "Expected set.",
+        }),
+    };
+}
+
+/// AssignmentList -> AssignmentStatement AssignmentListTail
+fn parse_assignment_list<'a>(
+    tokens: &'a [Token],
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
+    let (assignment_statement, assignment_statement_rest) = parse_assignment_statement(tokens)?;
+
+    return if let Some(assignment_statement_node) = assignment_statement {
+        let (assignment_list_tail, assignment_list_tail_rest) =
+            parse_assignment_list_tail(assignment_statement_rest)?;
+
+        if let Some(set_list_tail_node) = assignment_list_tail {
+            Ok((
+                Some(ParserNode::new(
+                    vec![assignment_statement_node, set_list_tail_node],
+                    ParserNodeType::AssignmentList,
+                )),
+                assignment_list_tail_rest,
+            ))
+        } else {
+            Ok((
+                Some(ParserNode::new(
+                    vec![assignment_statement_node],
+                    ParserNodeType::AssignmentList,
+                )),
+                assignment_statement_rest,
+            ))
+        }
+    } else {
+        unreachable!("RelationalExpression does not go to epsilon")
+    };
+}
+
+/// AssignmentListTail -> , AssignmentStatement AssignmentListTail | ε
+fn parse_assignment_list_tail<'a>(
+    tokens: &'a [Token],
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
+    if tokens.len() == 0 {
+        return Ok((None, tokens));
+    }
+
+    return match &tokens[0].token_type {
+        TokenType::Comma => {
+            let (assignment_statement, assignment_statement_rest) =
+                parse_assignment_statement(&tokens[1..])?;
+
+            return if let Some(assignment_statement_node) = assignment_statement {
+                let (assignment_list_tail, assignment_list_tail_rest) =
+                    parse_assignment_list_tail(assignment_statement_rest)?;
+
+                if let Some(assignment_list_tail_node) = assignment_list_tail {
+                    Ok((
+                        Some(ParserNode::new(
+                            vec![assignment_statement_node, assignment_list_tail_node],
+                            ParserNodeType::AssignmentListTail,
+                        )),
+                        assignment_list_tail_rest,
+                    ))
+                } else {
+                    Ok((
+                        Some(ParserNode::new(
+                            vec![assignment_statement_node],
+                            ParserNodeType::AssignmentListTail,
+                        )),
+                        assignment_statement_rest,
+                    ))
+                }
+            } else {
+                Ok((None, tokens))
+            };
+        }
+        _ => Ok((None, tokens)),
+    };
+}
+
+/// AssignmentStatement -> Identifier = RelationalExpression | ε
+fn parse_assignment_statement<'a>(
+    tokens: &'a [Token],
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
+    if tokens.len() < 3 {
+        return Ok((None, tokens));
+    }
+
+    return match &tokens[0].token_type {
+        TokenType::Identifier => {
+            let identifier_node =
+                ParserNode::new(Vec::new(), ParserNodeType::Identifier(tokens[0].value));
+
+            match &tokens[1].token_type {
+                TokenType::Equals => {
+                    let (relational_expression, relational_expression_rest) =
+                        parse_relational_expression(&tokens[2..])?;
+
+                    if let Some(relational_expression_node) = relational_expression {
+                        Ok((
+                            Some(ParserNode::new(
+                                vec![identifier_node, relational_expression_node],
+                                ParserNodeType::AssignmentStatement,
+                            )),
+                            relational_expression_rest,
+                        ))
+                    } else {
+                        unreachable!("RelationalExpression does not go to epsilon")
+                    }
+                }
+                _ => Err(ParseError {
+                    remaining_tokens: &tokens[1..],
+                    message: "Expected equals.",
+                }),
+            }
+        }
+        _ => Ok((None, tokens)),
+    };
+}
+
 /// WriteStatement -> Write WriteExpressionList
 fn parse_write_statement<'a>(
     tokens: &'a [Token],
-) -> Result<(Option<ParserNode>, &'a [Token<'a>]), ParseError<'a>> {
-    match &tokens[0].token_type {
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
+    return match &tokens[0].token_type {
         TokenType::Reserved(ReservedToken::Write) => {
             let (write_expression_list, write_expression_list_rest) =
                 parse_write_expression_list(&tokens[1..])?;
 
-            return if let Some(write_expression_list_node) = write_expression_list {
+            if let Some(write_expression_list_node) = write_expression_list {
                 Ok((
                     Some(ParserNode::new(
                         vec![write_expression_list_node],
@@ -78,19 +527,19 @@ fn parse_write_statement<'a>(
                 ))
             } else {
                 unreachable!("WriteExpressionList cannot go to epsilon");
-            };
+            }
         }
         _ => Err(ParseError {
             remaining_tokens: tokens,
             message: "Expected write.",
         }),
-    }
+    };
 }
 
 /// WriteExpressionList -> WriteExpression WriteExpressionListTail
 fn parse_write_expression_list<'a>(
     tokens: &'a [Token],
-) -> Result<(Option<ParserNode>, &'a [Token<'a>]), ParseError<'a>> {
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
     let (expression, expression_rest) = parse_write_expression(tokens)?;
 
     if let Some(expression_node) = expression {
@@ -125,7 +574,7 @@ fn parse_write_expression_list<'a>(
 /// Comma WriteExpression WriteExpressionListTail | ε
 fn parse_write_expr_list_tail<'a>(
     tokens: &'a [Token],
-) -> Result<(Option<ParserNode>, &'a [Token<'a>]), ParseError<'a>> {
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
     if tokens.len() == 0 {
         return Ok((None, tokens));
     }
@@ -169,7 +618,7 @@ fn parse_write_expr_list_tail<'a>(
 /// FormatExpression | RelationalExpression | ε
 fn parse_write_expression<'a>(
     tokens: &'a [Token],
-) -> Result<(Option<ParserNode>, &'a [Token<'a>]), ParseError<'a>> {
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
     if tokens.len() == 0 {
         return Ok((None, tokens));
     }
@@ -212,7 +661,7 @@ fn parse_write_expression<'a>(
 /// HashBangFormat FormatExpressionTail | ε
 fn parse_format_expression<'a>(
     tokens: &'a [Token],
-) -> Result<(Option<ParserNode>, &'a [Token<'a>]), ParseError<'a>> {
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
     let (hash_bang_format, hash_bang_format_rest) = parse_hash_bang_format(tokens);
 
     if let Some(hash_bang_format_node) = hash_bang_format {
@@ -242,7 +691,7 @@ fn parse_format_expression<'a>(
 }
 
 /// ( ! | # ) HashBangFormat | ε
-fn parse_hash_bang_format<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
+fn parse_hash_bang_format<'a>(tokens: &'a [Token]) -> (Option<ParserNode<'a>>, &'a [Token<'a>]) {
     if tokens.len() == 0 {
         return (None, tokens);
     }
@@ -305,7 +754,7 @@ fn parse_hash_bang_format<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [
 ///  ? RelationalExpression | ε
 fn parse_format_expression_tail<'a>(
     tokens: &'a [Token],
-) -> Result<(Option<ParserNode>, &'a [Token<'a>]), ParseError<'a>> {
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
     if tokens.len() == 0 {
         return Ok((None, tokens));
     }
@@ -339,7 +788,7 @@ fn parse_format_expression_tail<'a>(
 /// RelationalExpression -> Expression RelationalExpressionTail
 fn parse_relational_expression<'a>(
     tokens: &'a [Token],
-) -> Result<(Option<ParserNode>, &'a [Token<'a>]), ParseError<'a>> {
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
     let (expression, expression_rest) = parse_expression(tokens)?;
 
     return if let Some(expression_node) = expression {
@@ -371,7 +820,7 @@ fn parse_relational_expression<'a>(
 /// RelationalExpressionTail -> RelOp RelationalExpressionTail | ε
 fn parse_relational_expression_tail<'a>(
     tokens: &'a [Token],
-) -> Result<(Option<ParserNode>, &'a [Token<'a>]), ParseError<'a>> {
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
     let (rel_op, rel_op_rest) = parse_rel_op(tokens)?;
 
     return if let Some(rel_op_node) = rel_op {
@@ -396,7 +845,7 @@ fn parse_relational_expression_tail<'a>(
 /// RelOp -> > | < | >= | <= | ε
 fn parse_rel_op<'a>(
     tokens: &'a [Token],
-) -> Result<(Option<ParserNode>, &'a [Token<'a>]), ParseError<'a>> {
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
     if tokens.len() == 0 {
         return Ok((None, tokens));
     }
@@ -437,7 +886,7 @@ fn parse_rel_op<'a>(
 /// Expression -> Term ExpressionTail
 fn parse_expression<'a>(
     tokens: &'a [Token],
-) -> Result<(Option<ParserNode>, &'a [Token<'a>]), ParseError<'a>> {
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
     let (term, term_rest) = parse_term(tokens)?;
 
     if let Some(term_node) = term {
@@ -465,7 +914,7 @@ fn parse_expression<'a>(
 /// ExpressionTail -> ε | AddOp Term ExpressionTail
 fn parse_expression_tail<'a>(
     tokens: &'a [Token],
-) -> Result<(Option<ParserNode>, &'a [Token<'a>]), ParseError<'a>> {
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
     let (add_op, add_op_rest) = parse_add_op(tokens);
 
     if let Some(add_op_node) = add_op {
@@ -500,7 +949,7 @@ fn parse_expression_tail<'a>(
 }
 
 /// AddOp -> + | -
-fn parse_add_op<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
+fn parse_add_op<'a>(tokens: &'a [Token]) -> (Option<ParserNode<'a>>, &'a [Token<'a>]) {
     if tokens.len() == 0 {
         return (None, tokens);
     }
@@ -527,7 +976,7 @@ fn parse_add_op<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]
 /// Term -> Unary TermTail
 fn parse_term<'a>(
     tokens: &'a [Token],
-) -> Result<(Option<ParserNode>, &'a [Token<'a>]), ParseError<'a>> {
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
     let (unary, unary_rest) = parse_unary(tokens)?;
 
     if let Some(unary_node) = unary {
@@ -555,7 +1004,7 @@ fn parse_term<'a>(
 /// TermTail -> ε | MulOp Unary TermTail
 fn parse_term_tail<'a>(
     tokens: &'a [Token],
-) -> Result<(Option<ParserNode>, &'a [Token<'a>]), ParseError<'a>> {
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
     let (mul_op, mul_op_rest) = parse_mul_op(tokens);
 
     return if let Some(mul_node) = mul_op {
@@ -588,7 +1037,7 @@ fn parse_term_tail<'a>(
 }
 
 /// MulOp -> * | / | # | \ | ε
-fn parse_mul_op<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
+fn parse_mul_op<'a>(tokens: &'a [Token]) -> (Option<ParserNode<'a>>, &'a [Token<'a>]) {
     if tokens.len() == 0 {
         return (None, tokens);
     }
@@ -626,10 +1075,10 @@ fn parse_mul_op<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]
     };
 }
 
-/// Unary -> UnaryOp Unary | Factor
+/// Unary -> UnaryOp Unary | ExponentialTerm
 fn parse_unary<'a>(
     tokens: &'a [Token],
-) -> Result<(Option<ParserNode>, &'a [Token<'a>]), ParseError<'a>> {
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
     let (unary_op, unary_op_rest) = parse_unary_op(tokens);
 
     return if let Some(unary_op_node) = unary_op {
@@ -653,7 +1102,7 @@ fn parse_unary<'a>(
 }
 
 /// UnaryOp -> + | - | ' | ε
-fn parse_unary_op<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
+fn parse_unary_op<'a>(tokens: &'a [Token]) -> (Option<ParserNode<'a>>, &'a [Token<'a>]) {
     if tokens.len() == 0 {
         return (None, tokens);
     }
@@ -688,7 +1137,7 @@ fn parse_unary_op<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a
 /// ExponentialTerm -> Factor ExponentialTermTail
 fn parse_exponential_term<'a>(
     tokens: &'a [Token],
-) -> Result<(Option<ParserNode>, &'a [Token<'a>]), ParseError<'a>> {
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
     let (factor, factor_rest) = parse_factor(tokens)?;
 
     if let Some(term_node) = factor {
@@ -717,7 +1166,7 @@ fn parse_exponential_term<'a>(
 /// ExponentialTermTail -> Exponential Factor ExponentialTermTail | ε
 fn parse_exponential_term_tail<'a>(
     tokens: &'a [Token],
-) -> Result<(Option<ParserNode>, &'a [Token<'a>]), ParseError<'a>> {
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
     let (exponent, exponent_rest) = parse_exponential(tokens);
 
     return if let Some(exponent_node) = exponent {
@@ -753,7 +1202,7 @@ fn parse_exponential_term_tail<'a>(
 }
 
 /// ** | ε
-fn parse_exponential<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token<'a>]) {
+fn parse_exponential<'a>(tokens: &'a [Token]) -> (Option<ParserNode<'a>>, &'a [Token<'a>]) {
     if tokens.len() == 0 {
         return (None, tokens);
     }
@@ -767,10 +1216,10 @@ fn parse_exponential<'a>(tokens: &'a [Token]) -> (Option<ParserNode>, &'a [Token
     };
 }
 
-/// Factor -> NumericLiteral | ( expression ) | StringLiteral
+/// Factor -> NumericLiteral | ( expression ) | StringLiteral | Identifier
 fn parse_factor<'a>(
     tokens: &'a [Token],
-) -> Result<(Option<ParserNode>, &'a [Token<'a>]), ParseError<'a>> {
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
     if tokens.len() == 0 {
         return Err(ParseError {
             remaining_tokens: tokens,
@@ -806,6 +1255,21 @@ fn parse_factor<'a>(
             return Ok((
                 Some(ParserNode::new(
                     vec![string_literal],
+                    ParserNodeType::Factor,
+                )),
+                &tokens[1..],
+            ));
+        }
+
+        // Identifier
+        TokenType::Identifier => {
+            let identifier_name = tokens[0].value;
+            let identifier_node =
+                ParserNode::new(Vec::new(), ParserNodeType::Identifier(identifier_name));
+
+            return Ok((
+                Some(ParserNode::new(
+                    vec![identifier_node],
                     ParserNodeType::Factor,
                 )),
                 &tokens[1..],

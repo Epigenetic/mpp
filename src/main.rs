@@ -9,6 +9,7 @@ use crate::parser::print_parse_error;
 use crate::runtime::print_program;
 use crate::runtime::vm::VM;
 use crate::Flags::{ExecutionOutput, LexerOutput, ParserOutput, PrintProgram, Test};
+use std::collections::HashMap;
 use std::{env, io};
 
 mod lexer;
@@ -75,7 +76,8 @@ fn execute_line(input: String, flags: &Vec<Flags>) {
                             parser::print_parse_tree(&root);
                         }
                         let mut program: Vec<u8> = Vec::new();
-                        root.to_bytes(&mut program);
+                        let mut variable_map = HashMap::<String, usize>::new();
+                        root.to_bytes(&mut program, &mut variable_map);
                         if flags.contains(&PrintProgram) {
                             println!("{:?}", program);
                             print_program(&program);

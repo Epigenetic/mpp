@@ -11,7 +11,7 @@ use std::convert::TryInto;
 use std::ops::{Add, Div, Mul, Rem, Sub};
 use std::{fmt, str};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct MVal {
     value: Option<String>,
     array: Option<BTree>,
