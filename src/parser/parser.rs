@@ -819,7 +819,7 @@ fn parse_relational_expression<'a>(
     };
 }
 
-/// RelationalExpressionTail -> RelOp RelationalExpressionTail | ε
+/// RelationalExpressionTail -> RelOp Expression RelationalExpressionTail | ε
 fn parse_relational_expression_tail<'a>(
     tokens: &'a [Token],
 ) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
@@ -829,13 +829,30 @@ fn parse_relational_expression_tail<'a>(
         let (expression, expression_rest) = parse_expression(rel_op_rest)?;
 
         if let Some(expression_node) = expression {
-            Ok((
-                Some(ParserNode::new(
-                    vec![rel_op_node, expression_node],
-                    ParserNodeType::RelationalExpressionTail,
-                )),
-                expression_rest,
-            ))
+            let (relational_expression_tail, relational_expression_tail_rest) =
+                parse_relational_expression_tail(expression_rest)?;
+
+            if let Some(relational_expression_tail_node) = relational_expression_tail {
+                Ok((
+                    Some(ParserNode::new(
+                        vec![
+                            rel_op_node,
+                            expression_node,
+                            relational_expression_tail_node,
+                        ],
+                        ParserNodeType::RelationalExpressionTail,
+                    )),
+                    relational_expression_tail_rest,
+                ))
+            } else {
+                Ok((
+                    Some(ParserNode::new(
+                        vec![rel_op_node, expression_node],
+                        ParserNodeType::RelationalExpressionTail,
+                    )),
+                    expression_rest,
+                ))
+            }
         } else {
             unreachable!("Expression cannot go to epsilon")
         }
