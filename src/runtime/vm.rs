@@ -14,9 +14,10 @@ use rust_decimal::Decimal;
 use std::convert::TryInto;
 use std::io;
 use std::io::{stdout, Write};
+use std::rc::Rc;
 
 pub struct VM {
-    stack: Vec<MVal>,
+    stack: Vec<Rc<MVal>>,
     program: Vec<u8>,
     program_counter: usize,
     print_status: bool,
@@ -71,7 +72,7 @@ impl VM {
     fn execute_push(&mut self) {
         self.program_counter += 1;
         let (operand, operand_size) = MVal::from_bytes(&self.program[self.program_counter..]);
-        self.stack.push(operand);
+        self.stack.push(Rc::new(operand));
         self.program_counter += operand_size + std::mem::size_of::<usize>();
     }
 
@@ -79,7 +80,7 @@ impl VM {
         let rhs = self.stack.pop().expect("No rhs for add");
         let lhs = self.stack.pop().expect("No lhs for add");
 
-        self.stack.push(lhs + rhs);
+        self.stack.push(Rc::new(&*lhs + &*rhs));
         self.program_counter += 1;
     }
 
@@ -87,7 +88,7 @@ impl VM {
         let rhs = self.stack.pop().expect("No rhs for subtract");
         let lhs = self.stack.pop().expect("No lhs for subtract");
 
-        self.stack.push(lhs - rhs);
+        self.stack.push(Rc::new(&*lhs - &*rhs));
         self.program_counter += 1;
     }
 
@@ -95,7 +96,7 @@ impl VM {
         let rhs = self.stack.pop().expect("No rhs for multiply");
         let lhs = self.stack.pop().expect("No lhs for multiply");
 
-        self.stack.push(lhs * rhs);
+        self.stack.push(Rc::new(&*lhs * &*rhs));
         self.program_counter += 1;
     }
 
@@ -103,7 +104,7 @@ impl VM {
         let rhs = self.stack.pop().expect("No rhs for divide");
         let lhs = self.stack.pop().expect("No lhs for divide");
 
-        self.stack.push(lhs / rhs);
+        self.stack.push(Rc::new(&*lhs / &*rhs));
         self.program_counter += 1;
     }
 
@@ -111,7 +112,7 @@ impl VM {
         let rhs = self.stack.pop().expect("No rhs for modulus");
         let lhs = self.stack.pop().expect("No lhs for modulus");
 
-        self.stack.push(lhs.modulo(rhs));
+        self.stack.push(Rc::new(lhs.modulo(&*rhs)));
         self.program_counter += 1;
     }
 
@@ -119,7 +120,7 @@ impl VM {
         let rhs = self.stack.pop().expect("No rhs for integer divide");
         let lhs = self.stack.pop().expect("No lhs for integer divide");
 
-        self.stack.push(lhs.integer_divide(rhs));
+        self.stack.push(Rc::new(lhs.integer_divide(&*rhs)));
         self.program_counter += 1;
     }
 
@@ -127,25 +128,25 @@ impl VM {
         let rhs = self.stack.pop().expect("No rhs for exponent");
         let lhs = self.stack.pop().expect("No lhs for exponent");
 
-        self.stack.push(lhs.exponent(rhs));
+        self.stack.push(Rc::new(lhs.exponent(&*rhs)));
         self.program_counter += 1;
     }
 
     fn execute_to_number(&mut self) {
         let operand = self.stack.pop().expect("No operand for to number");
 
-        self.stack.push(MVal::from_string_no_sanitize(
+        self.stack.push(Rc::new(MVal::from_string_no_sanitize(
             operand.numeric_interpretation().to_string(),
-        ));
+        )));
         self.program_counter += 1;
     }
 
     fn execute_to_negative_number(&mut self) {
         let operand = self.stack.pop().expect("No operand for to negative number");
 
-        self.stack.push(MVal::from_string_no_sanitize(
+        self.stack.push(Rc::new(MVal::from_string_no_sanitize(
             (operand.numeric_interpretation() * Decimal::from(-1)).to_string(),
-        ));
+        )));
         self.program_counter += 1;
     }
 
@@ -195,7 +196,7 @@ impl VM {
         let rhs = self.stack.pop().expect("No rhs for less than");
         let lhs = self.stack.pop().expect("No lhs for less than");
 
-        self.stack.push(lhs.less_than(rhs));
+        self.stack.push(Rc::new(lhs.less_than(&*rhs)));
         self.program_counter += 1;
     }
 
@@ -203,7 +204,7 @@ impl VM {
         let rhs = self.stack.pop().expect("No rhs for greater than");
         let lhs = self.stack.pop().expect("No lhs for greater than");
 
-        self.stack.push(lhs.greater_than(rhs));
+        self.stack.push(Rc::new(lhs.greater_than(&*rhs)));
         self.program_counter += 1;
     }
 
@@ -211,7 +212,7 @@ impl VM {
         let rhs = self.stack.pop().expect("No rhs for less than or equal to");
         let lhs = self.stack.pop().expect("No lhs for less than or equal to");
 
-        self.stack.push(lhs.less_than_or_equal_to(rhs));
+        self.stack.push(Rc::new(lhs.less_than_or_equal_to(&*rhs)));
         self.program_counter += 1;
     }
 
@@ -225,19 +226,20 @@ impl VM {
             .pop()
             .expect("No lhs for greater than or equal to");
 
-        self.stack.push(lhs.greater_than_or_equal_to(rhs));
+        self.stack
+            .push(Rc::new(lhs.greater_than_or_equal_to(&*rhs)));
         self.program_counter += 1;
     }
 
     fn execute_not(&mut self) {
         let operand = self.stack.pop().expect("No operand for not");
 
-        self.stack.push(operand.not());
+        self.stack.push(Rc::new(operand.not()));
         self.program_counter += 1;
     }
 
     fn execute_new(&mut self) {
-        self.stack.push(MVal::new());
+        self.stack.push(Rc::new(MVal::new()));
         self.program_counter += 1
     }
 
@@ -254,7 +256,7 @@ impl VM {
         let pos_bytes = &self.program
             [self.program_counter + 1..self.program_counter + 1 + std::mem::size_of::<usize>()];
         let var_position = usize::from_le_bytes(pos_bytes.try_into().unwrap());
-        let variable = self.stack[var_position].clone();
+        let variable = Rc::clone(&self.stack[var_position]);
         self.stack.push(variable);
         self.program_counter += 1 + std::mem::size_of::<usize>();
     }

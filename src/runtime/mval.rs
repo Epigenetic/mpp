@@ -126,7 +126,7 @@ impl MVal {
 
     /// Modulo for MVals
     /// This is a proper modulo, not remainder like in rust
-    pub fn modulo(&self, rhs: Self) -> Self {
+    pub fn modulo(&self, rhs: &Self) -> Self {
         let lhs_decimal = self.numeric_interpretation();
         let rhs_decimal = rhs.numeric_interpretation();
         return MVal::from_string_no_sanitize(
@@ -136,7 +136,7 @@ impl MVal {
 
     /// Integer division for MVals. Essentially arithmetic division, but any fractional part of the
     /// result is discarded
-    pub fn integer_divide(&self, rhs: Self) -> Self {
+    pub fn integer_divide(&self, rhs: &Self) -> Self {
         let lhs_decimal = self.numeric_interpretation();
         let rhs_decimal = rhs.numeric_interpretation();
         return MVal::from_string_no_sanitize(
@@ -148,7 +148,7 @@ impl MVal {
 
     /// Raise an MVal to the rhs power. Uses floating point to do calculations for now, so not as
     /// precise as other operations.
-    pub fn exponent(&self, rhs: Self) -> Self {
+    pub fn exponent(&self, rhs: &Self) -> Self {
         let lhs_double = self.numeric_interpretation().to_f64().unwrap();
         let rhs_double = rhs.numeric_interpretation().to_f64().unwrap();
         let result = f64::powf(lhs_double, rhs_double).to_string();
@@ -157,7 +157,7 @@ impl MVal {
     }
 
     /// Less than for MVals. Compares the numeric values, outputting 1 if true, 0 if false
-    pub fn less_than(&self, rhs: MVal) -> MVal {
+    pub fn less_than(&self, rhs: &Self) -> Self {
         let lhs_decimal = self.numeric_interpretation();
         let rhs_decimal = rhs.numeric_interpretation();
 
@@ -167,7 +167,7 @@ impl MVal {
     }
 
     /// Greater than for MVals. Compares the numeric values, outputting 1 if true, 0 if false
-    pub fn greater_than(&self, rhs: MVal) -> MVal {
+    pub fn greater_than(&self, rhs: &Self) -> Self {
         let lhs_decimal = self.numeric_interpretation();
         let rhs_decimal = rhs.numeric_interpretation();
 
@@ -177,7 +177,7 @@ impl MVal {
     }
 
     /// Less than or equal to for MVals. Compares the numeric values, outputting 1 if true, 0 if false
-    pub fn less_than_or_equal_to(&self, rhs: MVal) -> MVal {
+    pub fn less_than_or_equal_to(&self, rhs: &Self) -> Self {
         let lhs_decimal = self.numeric_interpretation();
         let rhs_decimal = rhs.numeric_interpretation();
 
@@ -187,7 +187,7 @@ impl MVal {
     }
 
     /// Greater than or equal to for MVals. Compares the numeric values, outputting 1 if true, 0 if false
-    pub fn greater_than_or_equal_to(&self, rhs: MVal) -> MVal {
+    pub fn greater_than_or_equal_to(&self, rhs: &Self) -> Self {
         let lhs_decimal = self.numeric_interpretation();
         let rhs_decimal = rhs.numeric_interpretation();
         return MVal::from_string_no_sanitize(
@@ -196,7 +196,7 @@ impl MVal {
     }
 
     /// Not for MVals. If the numeric interpretation is greater than 0
-    pub fn not(&self) -> MVal {
+    pub fn not(&self) -> Self {
         return MVal::from_string_no_sanitize(
             if self.boolean_interpretation() {
                 "0"
@@ -334,7 +334,7 @@ impl fmt::Display for MVal {
     }
 }
 
-impl Add for MVal {
+impl Add for &MVal {
     type Output = MVal;
 
     fn add(self, rhs: Self) -> Self::Output {
@@ -344,7 +344,7 @@ impl Add for MVal {
     }
 }
 
-impl Sub for MVal {
+impl Sub for &MVal {
     type Output = MVal;
 
     fn sub(self, rhs: Self) -> Self::Output {
@@ -354,7 +354,7 @@ impl Sub for MVal {
     }
 }
 
-impl Mul for MVal {
+impl Mul for &MVal {
     type Output = MVal;
 
     fn mul(self, rhs: Self) -> Self::Output {
@@ -364,7 +364,7 @@ impl Mul for MVal {
     }
 }
 
-impl Div for MVal {
+impl Div for &MVal {
     type Output = MVal;
 
     fn div(self, rhs: Self) -> Self::Output {
@@ -374,7 +374,7 @@ impl Div for MVal {
     }
 }
 
-impl Rem for MVal {
+impl Rem for &MVal {
     type Output = MVal;
 
     fn rem(self, rhs: Self) -> Self::Output {
@@ -393,7 +393,7 @@ mod test {
         let lhs = MVal::from_string_no_sanitize("2".to_string());
         let rhs = MVal::from_string_no_sanitize("3".to_string());
 
-        assert_eq!(lhs + rhs, MVal::from_string_no_sanitize("5".to_string()))
+        assert_eq!(&lhs + &rhs, MVal::from_string_no_sanitize("5".to_string()))
     }
 
     #[test]
@@ -401,7 +401,7 @@ mod test {
         let lhs = MVal::from_string_no_sanitize("2".to_string());
         let rhs = MVal::from_string_no_sanitize("3".to_string());
 
-        assert_eq!(lhs - rhs, MVal::from_string_no_sanitize("-1".to_string()))
+        assert_eq!(&lhs - &rhs, MVal::from_string_no_sanitize("-1".to_string()))
     }
 
     #[test]
@@ -409,7 +409,7 @@ mod test {
         let lhs = MVal::from_string_no_sanitize("2".to_string());
         let rhs = MVal::from_string_no_sanitize("3".to_string());
 
-        assert_eq!(lhs * rhs, MVal::from_string_no_sanitize("6".to_string()))
+        assert_eq!(&lhs * &rhs, MVal::from_string_no_sanitize("6".to_string()))
     }
 
     #[test]
@@ -421,7 +421,7 @@ mod test {
         Not testing MVal itself to avoid leading/trailing zeroes in internal representation
         causing any issues
         */
-        assert_eq!((lhs / rhs).string_interpretation(), ".5")
+        assert_eq!((&lhs / &rhs).string_interpretation(), ".5")
     }
 
     #[test]
@@ -430,7 +430,7 @@ mod test {
         let rhs = MVal::from_string_no_sanitize("3".to_string());
 
         assert_eq!(
-            lhs.integer_divide(rhs),
+            lhs.integer_divide(&rhs),
             MVal::from_string_no_sanitize("0".to_string())
         )
     }
@@ -441,7 +441,7 @@ mod test {
         let rhs = MVal::from_string_no_sanitize("3".to_string());
 
         assert_eq!(
-            lhs.modulo(rhs),
+            lhs.modulo(&rhs),
             MVal::from_string_no_sanitize("2".to_string())
         )
     }
@@ -452,7 +452,7 @@ mod test {
         let rhs = MVal::from_string_no_sanitize("3".to_string());
 
         assert_eq!(
-            lhs.exponent(rhs),
+            lhs.exponent(&rhs),
             MVal::from_string_no_sanitize("8".to_string())
         )
     }
