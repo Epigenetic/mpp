@@ -41,26 +41,35 @@ impl fmt::Display for Token<'_> {
 pub enum TokenType {
     NumLit,
     StrLit,
+    Identifier,
+
     Plus,
     Minus,
+
     Times,
     Divide,
     Hash,
     IntDivide,
+
     Power,
     LParen,
     RParen,
-    Comma,
-    Reserved(ReservedToken),
+
     Bang,
     QuestionMark,
+
     LessThanOrEqualTo,
     GreaterThanOrEqualTo,
     GreaterThan,
     LessThan,
+
     Not,
     Equals,
-    Identifier,
+    NotEquals,
+
+    Reserved(ReservedToken),
+
+    Comma,
     NewLine,
 }
 

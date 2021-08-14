@@ -210,15 +210,27 @@ impl Tokenizer {
                     }
                 }
                 '\'' => {
-                    tokens.push(Token::new(
-                        TokenType::Not,
-                        self.position,
-                        self.position + 1,
-                        self.line,
-                        &self.input[self.position..self.position + 1],
-                    ));
-                    self.position += 1;
-                    self.row += 1;
+                    if str_array.len() >= self.position && str_array[self.position + 1] == '=' {
+                        tokens.push(Token::new(
+                            TokenType::NotEquals,
+                            self.position,
+                            self.position + 2,
+                            self.line,
+                            &self.input[self.position..self.position + 2],
+                        ));
+                        self.position += 2;
+                        self.row += 1;
+                    } else {
+                        tokens.push(Token::new(
+                            TokenType::Not,
+                            self.position,
+                            self.position + 1,
+                            self.line,
+                            &self.input[self.position..self.position + 1],
+                        ));
+                        self.position += 1;
+                        self.row += 1;
+                    }
                 }
                 '=' => {
                     tokens.push(Token::new(
@@ -1032,6 +1044,22 @@ mod tests {
         if let Ok(tokens_ok) = tokens {
             assert_eq!(tokens_ok.len(), 1);
             assert_eq!(tokens_ok[0], Token::new(TokenType::NewLine, 0, 1, 0, "\n"))
+        }
+    }
+
+    #[test]
+    fn test_lex_not_equals() {
+        let input = "'=";
+        let mut tokenizer = Tokenizer::new(input.to_string());
+        let tokens = tokenizer.tokenize();
+
+        assert!(tokens.is_ok());
+        if let Ok(tokens_ok) = tokens {
+            assert_eq!(tokens_ok.len(), 1);
+            assert_eq!(
+                tokens_ok[0],
+                Token::new(TokenType::NotEquals, 0, 2, 0, "'=")
+            )
         }
     }
 }
