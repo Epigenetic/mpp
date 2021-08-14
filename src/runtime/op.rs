@@ -31,6 +31,8 @@ pub enum Ops {
     New = 20,
     Set = 21,
     Get = 22,
+    Equals = 23,
+    NotEquals = 24,
 }
 
 impl Ops {
@@ -58,6 +60,8 @@ impl Ops {
             20 => Ops::New,
             21 => Ops::Set,
             22 => Ops::Get,
+            23 => Ops::Equals,
+            24 => Ops::NotEquals,
             op => panic!("Unrecognized op code {}", op),
         }
     }
@@ -91,27 +95,27 @@ pub fn print_program(program: &Vec<u8>) {
             }
             Ops::Mod => {
                 println!("MOD");
-                index += 1
+                index += 1;
             }
             Ops::IntDiv => {
                 println!("INT_DIV");
-                index += 1
+                index += 1;
             }
             Ops::ToNum => {
                 println!("TO_NUM");
-                index += 1
+                index += 1;
             }
             Ops::ToNegNum => {
                 println!("TO_NEG_NUM");
-                index += 1
+                index += 1;
             }
             Ops::Exp => {
                 println!("EXP");
-                index += 1
+                index += 1;
             }
             Ops::Write => {
                 println!("WRITE");
-                index += 1
+                index += 1;
             }
             Ops::WriteLine => {
                 println!("WRITE_LINE");
@@ -147,15 +151,23 @@ pub fn print_program(program: &Vec<u8>) {
             }
             Ops::New => {
                 println!("NEW");
-                index += 1
+                index += 1;
             }
             Ops::Set => {
                 println!("SET {}", program[index + 1]);
-                index += 1 + std::mem::size_of::<usize>()
+                index += 1 + std::mem::size_of::<usize>();
             }
             Ops::Get => {
                 println!("GET {}", program[index + 1]);
-                index += 1 + std::mem::size_of::<usize>()
+                index += 1 + std::mem::size_of::<usize>();
+            }
+            Ops::Equals => {
+                println!("EQUALS");
+                index += 1;
+            }
+            Ops::NotEquals => {
+                println!("NOT_EQUALS");
+                index += 1;
             }
         }
     }

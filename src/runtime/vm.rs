@@ -65,6 +65,8 @@ impl VM {
                 Ops::New => self.execute_new(),
                 Ops::Set => self.execute_set(),
                 Ops::Get => self.execute_get(),
+                Ops::Equals => self.execute_equals(),
+                Ops::NotEquals => self.execute_not_equals(),
             }
         }
     }
@@ -259,5 +261,21 @@ impl VM {
         let variable = Rc::clone(&self.stack[var_position]);
         self.stack.push(variable);
         self.program_counter += 1 + std::mem::size_of::<usize>();
+    }
+
+    fn execute_equals(&mut self) {
+        let rhs = self.stack.pop().expect("No rhs for equals");
+        let lhs = self.stack.pop().expect("No lhs for equals");
+
+        self.stack.push(Rc::new(lhs.equals(&*rhs)));
+        self.program_counter += 1;
+    }
+
+    fn execute_not_equals(&mut self) {
+        let rhs = self.stack.pop().expect("No rhs for not equals");
+        let lhs = self.stack.pop().expect("No lhs for not equals");
+
+        self.stack.push(Rc::new(lhs.not_equals(&*rhs)));
+        self.program_counter += 1;
     }
 }

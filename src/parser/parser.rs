@@ -5,7 +5,7 @@
  */
 
 use crate::lexer::{ReservedToken, Token, TokenType};
-use crate::parser::parse_node::{AddOp, MulOp, ParserNode, RelOp, UnaryOp, WriteFormat};
+use crate::parser::parse_node::{AddOp, EqOp, MulOp, ParserNode, RelOp, UnaryOp, WriteFormat};
 use crate::parser::ParserNodeType;
 use crate::runtime::MVal;
 
@@ -424,7 +424,7 @@ fn parse_assignment_list<'a>(
             ))
         }
     } else {
-        unreachable!("RelationalExpression cannot go to epsilon")
+        unreachable!("AssignmentStatement cannot go to epsilon")
     };
 }
 
@@ -470,7 +470,7 @@ fn parse_assignment_list_tail<'a>(
     };
 }
 
-/// AssignmentStatement -> Identifier = RelationalExpression | ε
+/// AssignmentStatement -> Identifier = EqualityExpression | ε
 fn parse_assignment_statement<'a>(
     tokens: &'a [Token],
 ) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
@@ -485,19 +485,19 @@ fn parse_assignment_statement<'a>(
 
             match &tokens[1].token_type {
                 TokenType::Equals => {
-                    let (relational_expression, relational_expression_rest) =
-                        parse_relational_expression(&tokens[2..])?;
+                    let (equality_expression, equality_expression_rest) =
+                        parse_equality_expression(&tokens[2..])?;
 
-                    if let Some(relational_expression_node) = relational_expression {
+                    if let Some(equality_expression_node) = equality_expression {
                         Ok((
                             Some(ParserNode::new(
-                                vec![identifier_node, relational_expression_node],
+                                vec![identifier_node, equality_expression_node],
                                 ParserNodeType::AssignmentStatement,
                             )),
-                            relational_expression_rest,
+                            equality_expression_rest,
                         ))
                     } else {
-                        unreachable!("RelationalExpression cannot go to epsilon")
+                        unreachable!("EqualityExpression cannot go to epsilon")
                     }
                 }
                 _ => Err(ParseError {
@@ -617,7 +617,7 @@ fn parse_write_expr_list_tail<'a>(
     };
 }
 
-/// FormatExpression | RelationalExpression | ε
+/// FormatExpression | EqualityExpression | ε
 fn parse_write_expression<'a>(
     tokens: &'a [Token],
 ) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
@@ -642,16 +642,16 @@ fn parse_write_expression<'a>(
             }
         }
         _ => {
-            let (relational_expression, relational_expression_rest) =
-                parse_relational_expression(tokens)?;
+            let (equality_expression, equality_expression_tail) =
+                parse_equality_expression(tokens)?;
 
-            return if let Some(expression_node) = relational_expression {
+            return if let Some(equality_expression_node) = equality_expression {
                 Ok((
                     Some(ParserNode::new(
-                        vec![expression_node],
+                        vec![equality_expression_node],
                         ParserNodeType::WriteExpression,
                     )),
-                    relational_expression_rest,
+                    equality_expression_tail,
                 ))
             } else {
                 unreachable!("Expression cannot go to epsilon")
@@ -753,7 +753,7 @@ fn parse_hash_bang_format<'a>(tokens: &'a [Token]) -> (Option<ParserNode<'a>>, &
     };
 }
 
-///  ? RelationalExpression | ε
+///  ? EqualityExpression | ε
 fn parse_format_expression_tail<'a>(
     tokens: &'a [Token],
 ) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
@@ -763,12 +763,12 @@ fn parse_format_expression_tail<'a>(
 
     return match &tokens[0].token_type {
         TokenType::QuestionMark => {
-            let (relational_expression, relational_expression_rest) =
-                parse_relational_expression(&tokens[1..])?;
+            let (equality_expression, equality_expression_rest) =
+                parse_equality_expression(&tokens[1..])?;
 
-            if let Some(expression_node) = relational_expression {
+            if let Some(equality_expression_node) = equality_expression {
                 let write_to_col_node = ParserNode::new(
-                    vec![expression_node],
+                    vec![equality_expression_node],
                     ParserNodeType::WriteFormat(WriteFormat::ToCol),
                 );
 
@@ -777,12 +777,114 @@ fn parse_format_expression_tail<'a>(
                         vec![write_to_col_node],
                         ParserNodeType::FormatExpressionTail,
                     )),
-                    relational_expression_rest,
+                    equality_expression_rest,
                 ))
             } else {
                 unreachable!("Expression can not go to epsilon");
             }
         }
+        _ => Ok((None, tokens)),
+    };
+}
+
+/// EqualityExpression -> RelationalExpression EqualityExpressionTail
+fn parse_equality_expression<'a>(
+    tokens: &'a [Token],
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
+    let (relational_expression, relational_expression_rest) = parse_relational_expression(tokens)?;
+
+    if let Some(relational_expression_node) = relational_expression {
+        let (equality_expression_tail, equality_expression_tail_rest) =
+            parse_equality_expression_tail(relational_expression_rest)?;
+
+        if let Some(equality_expression_tail_node) = equality_expression_tail {
+            Ok((
+                Some(ParserNode::new(
+                    vec![relational_expression_node, equality_expression_tail_node],
+                    ParserNodeType::EqualityExpression,
+                )),
+                equality_expression_tail_rest,
+            ))
+        } else {
+            Ok((
+                Some(ParserNode::new(
+                    vec![relational_expression_node],
+                    ParserNodeType::EqualityExpression,
+                )),
+                relational_expression_rest,
+            ))
+        }
+    } else {
+        unreachable!("RelationalExpression cannot go to epsilon");
+    }
+}
+
+/// EqualityExpressionTail -> EqOp RelationalExpression EqualityExpressionTail | ε
+fn parse_equality_expression_tail<'a>(
+    tokens: &'a [Token],
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
+    let (eq_op, eq_op_rest) = parse_eq_op(tokens)?;
+
+    return if let Some(eq_op_node) = eq_op {
+        let (relational_expression, relational_expression_rest) =
+            parse_relational_expression(eq_op_rest)?;
+
+        if let Some(relational_expression_node) = relational_expression {
+            let (equality_expression_tail, equality_expression_tail_rest) =
+                parse_equality_expression_tail(relational_expression_rest)?;
+
+            if let Some(equality_expression_tail_node) = equality_expression_tail {
+                Ok((
+                    Some(ParserNode::new(
+                        vec![
+                            eq_op_node,
+                            relational_expression_node,
+                            equality_expression_tail_node,
+                        ],
+                        ParserNodeType::EqualityExpressionTail,
+                    )),
+                    equality_expression_tail_rest,
+                ))
+            } else {
+                Ok((
+                    Some(ParserNode::new(
+                        vec![eq_op_node, relational_expression_node],
+                        ParserNodeType::EqualityExpressionTail,
+                    )),
+                    relational_expression_rest,
+                ))
+            }
+        } else {
+            unreachable!("RelationalExpression cannot go to epsilon")
+        }
+    } else {
+        Ok((None, tokens))
+    };
+}
+
+/// EqOp => = | '= | ε
+fn parse_eq_op<'a>(
+    tokens: &'a [Token],
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
+    if tokens.len() == 0 || tokens[0].token_type == TokenType::NewLine {
+        return Ok((None, tokens));
+    }
+
+    return match &tokens[0].token_type {
+        TokenType::Equals => Ok((
+            Some(ParserNode::new(
+                Vec::new(),
+                ParserNodeType::EqOp(EqOp::Equals),
+            )),
+            &tokens[1..],
+        )),
+        TokenType::NotEquals => Ok((
+            Some(ParserNode::new(
+                Vec::new(),
+                ParserNodeType::EqOp(EqOp::NotEquals),
+            )),
+            &tokens[1..],
+        )),
         _ => Ok((None, tokens)),
     };
 }
@@ -1302,8 +1404,8 @@ fn parse_factor<'a>(
 
         // ( expression )
         TokenType::LParen => {
-            let (expression, expression_rest) = parse_relational_expression(&tokens[1..])?;
-            return if let Some(expression_node) = expression {
+            let (equality_expression, expression_rest) = parse_equality_expression(&tokens[1..])?;
+            return if let Some(equality_expression_node) = equality_expression {
                 if expression_rest.len() == 0 {
                     return Err(ParseError {
                         remaining_tokens: expression_rest,
@@ -1318,7 +1420,7 @@ fn parse_factor<'a>(
 
                 Ok((
                     Some(ParserNode::new(
-                        vec![expression_node],
+                        vec![equality_expression_node],
                         ParserNodeType::Expression,
                     )),
                     &expression_rest[1..],

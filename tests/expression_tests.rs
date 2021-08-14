@@ -43,3 +43,8 @@ fn test_malformed_expression() {
 fn test_variables() {
     run_tests("tests/expression_tests/variable.mtest")
 }
+
+#[test]
+fn test_equality_expression() {
+    run_tests("tests/expression_tests/equality_expression.mtest");
+}

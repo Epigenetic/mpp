@@ -141,7 +141,7 @@ impl ParserNode<'_> {
             ParserNodeType::WriteExpression => {
                 // Expression | ! | #
                 self.children[0].to_bytes(program, variable_map);
-                if self.children[0].node_type == ParserNodeType::RelationalExpression {
+                if self.children[0].node_type == ParserNodeType::EqualityExpression {
                     program.push(Ops::Write as u8);
                 }
             }
@@ -181,7 +181,7 @@ impl ParserNode<'_> {
                 }
             }
             ParserNodeType::WriteExpressionList => {
-                // RelationalExpression
+                // WriteExpression
                 self.children[0].to_bytes(program, variable_map);
 
                 // Has a WriteExpressionListTail
@@ -191,7 +191,7 @@ impl ParserNode<'_> {
                 }
             }
             ParserNodeType::WriteExpressionListTail => {
-                // RelationalExpression
+                // WriteExpression
                 self.children[0].to_bytes(program, variable_map);
 
                 // Has a WriteExpressionListTail
@@ -200,6 +200,33 @@ impl ParserNode<'_> {
                     self.children[1].to_bytes(program, variable_map)
                 }
             }
+            ParserNodeType::EqualityExpression => {
+                // RelationalExpression
+                self.children[0].to_bytes(program, variable_map);
+
+                // Has an EqualityExpressionTail
+                if self.children.len() == 2 {
+                    // EqualityExpressionTail
+                    self.children[1].to_bytes(program, variable_map);
+                }
+            }
+            ParserNodeType::EqualityExpressionTail => {
+                // RelationalExpression
+                self.children[1].to_bytes(program, variable_map);
+
+                // EqOp
+                self.children[0].to_bytes(program, variable_map);
+
+                // Has an EqualityExpressionTail
+                if self.children.len() == 3 {
+                    // EqualityExpression
+                    self.children[2].to_bytes(program, variable_map);
+                }
+            }
+            ParserNodeType::EqOp(op) => match op {
+                EqOp::Equals => program.push(Ops::Equals as u8),
+                EqOp::NotEquals => program.push(Ops::NotEquals as u8),
+            },
             ParserNodeType::RelationalExpression => {
                 // Expression
                 self.children[0].to_bytes(program, variable_map);
@@ -376,6 +403,8 @@ impl fmt::Display for ParserNode<'_> {
             ParserNodeType::FormatExpressionTail => write!(f, "FormatExpressionTail"),
             ParserNodeType::HashBangFormat => write!(f, "HashBangFormat"),
 
+            ParserNodeType::EqualityExpression => write!(f, "EqualityExpression"),
+            ParserNodeType::EqualityExpressionTail => write!(f, "EqualityExpressionTail"),
             ParserNodeType::RelationalExpression => write!(f, "RelationalExpression"),
             ParserNodeType::RelationalExpressionTail => write!(f, "RelationalExpressionTail"),
             ParserNodeType::RelOp(op) => write!(f, "RelOp: {:?}", op),
@@ -388,6 +417,7 @@ impl fmt::Display for ParserNode<'_> {
             ParserNodeType::AddOp(op) => write!(f, "AddOp: {:?}", op),
             ParserNodeType::MulOp(op) => write!(f, "MulOp: {:?}", op),
             ParserNodeType::UnaryOp(op) => write!(f, "UnaryOp: {:?}", op),
+            ParserNodeType::EqOp(op) => write!(f, "EqOp: {:?}", op),
             ParserNodeType::ExpOp => write!(f, "ExpOp"),
             ParserNodeType::ExpTerm => write!(f, "ExpTerm"),
             ParserNodeType::ExpTermTail => write!(f, "ExpTermTail"),
@@ -426,20 +456,29 @@ pub enum ParserNodeType<'a> {
     FormatExpressionTail,
     HashBangFormat,
 
+    EqualityExpression,
+    EqualityExpressionTail,
+
     RelationalExpression,
     RelationalExpressionTail,
 
     Expression,
     ExpressionTail,
+
     Term,
     TermTail,
+
     Unary,
+
     Factor,
+
     AddOp(AddOp),
     MulOp(MulOp),
     UnaryOp(UnaryOp),
     RelOp(RelOp),
+    EqOp(EqOp),
     ExpOp,
+
     ExpTerm,
     ExpTermTail,
 
@@ -470,18 +509,24 @@ pub enum UnaryOp {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum WriteFormat {
-    NewLine,
-    ClearScreen,
-    ToCol,
-}
-
-#[derive(Debug, PartialEq)]
 pub enum RelOp {
     GreaterThan,
     LessThan,
     GreaterThanOrEqualTo,
     LessThanOrEqualTo,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum EqOp {
+    Equals,
+    NotEquals,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum WriteFormat {
+    NewLine,
+    ClearScreen,
+    ToCol,
 }
 
 pub fn print_parse_tree(root: &ParserNode) {

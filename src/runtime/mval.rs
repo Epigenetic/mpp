@@ -195,7 +195,7 @@ impl MVal {
         );
     }
 
-    /// Not for MVals. If the numeric interpretation is greater than 0
+    /// Not for MVals. If the numeric interpretation is greater than 0, it returns 0, otherwise 1
     pub fn not(&self) -> Self {
         return MVal::from_string_no_sanitize(
             if self.boolean_interpretation() {
@@ -205,6 +205,24 @@ impl MVal {
             }
             .to_string(),
         );
+    }
+
+    /// Equals for MVals. Only compares the values of the MVals, not the array
+    pub fn equals(&self, rhs: &Self) -> Self {
+        return if self.value == rhs.value {
+            MVal::from_string_no_sanitize("1".to_string())
+        } else {
+            MVal::from_string_no_sanitize("0".to_string())
+        };
+    }
+
+    /// Not equals for MVals. Only compares the values of the MVals, not the array.
+    pub fn not_equals(&self, rhs: &Self) -> Self {
+        return if self.value != rhs.value {
+            MVal::from_string_no_sanitize("1".to_string())
+        } else {
+            MVal::from_string_no_sanitize("0".to_string())
+        };
     }
 
     fn clean_float(&self, value: String) -> String {
