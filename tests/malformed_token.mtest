@@ -15,8 +15,3 @@ foo%
 ;;;0:3
 ;;;foo%
 ;;;   ^ Percent can only be the first character in an identifier.
-
-foo`
-;;;0:3
-;;;foo`
-;;;   ^ Illegal character in identifier.

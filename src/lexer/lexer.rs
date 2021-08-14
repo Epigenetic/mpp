@@ -651,7 +651,7 @@ mod tests {
         let input = "123";
         let (token, position) = tokenize_number(input, 0, 0);
 
-        assert_eq!(token, Token::new(TokenType::NumLit, 0, 2, 0, "123",));
+        assert_eq!(token, Token::new(TokenType::NumLit, 0, 3, 0, "123",));
         assert_eq!(position, 3)
     }
 
@@ -660,7 +660,7 @@ mod tests {
         let input = "baz 123.456 foobar";
         let (token, position) = tokenize_number(&input[4..], 5, 0);
 
-        assert_eq!(token, Token::new(TokenType::NumLit, 5, 11, 0, "123.456",));
+        assert_eq!(token, Token::new(TokenType::NumLit, 5, 12, 0, "123.456",));
         assert_eq!(position, 7);
     }
 

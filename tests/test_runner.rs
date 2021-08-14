@@ -42,7 +42,7 @@ fn execute_test(test: &str) {
     let test_assertion = test_pieces[1];
 
     let mut command = Command::new(format!("./target/debug/mpp{}", env::consts::EXE_SUFFIX));
-    command.arg("-r").arg(test_body);
+    command.arg("-r").arg(test_body.to_owned() + "\n");
     println!("Test: {}", test);
     match command.output() {
         Err(e) => panic!("Error running compiler: {}", e),

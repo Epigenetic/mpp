@@ -37,7 +37,9 @@ impl Parser<'_> {
 pub fn print_parse_error(input: String, error: ParseError) {
     let lines: Vec<&str> = input.lines().collect();
 
-    if error.remaining_tokens.len() == 0 {
+    if error.remaining_tokens.len() == 0
+        || error.remaining_tokens[0].token_type == TokenType::NewLine
+    {
         let last_line = lines[lines.len() - 1];
         eprintln!("{}:{}", lines.len() - 1, last_line.len() - 1);
         eprintln!("{}", last_line);
@@ -619,7 +621,7 @@ fn parse_write_expr_list_tail<'a>(
 fn parse_write_expression<'a>(
     tokens: &'a [Token],
 ) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
-    if tokens.len() == 0 {
+    if tokens.len() == 0 || tokens[0].token_type == TokenType::NewLine {
         return Ok((None, tokens));
     }
 
@@ -1225,6 +1227,11 @@ fn parse_factor<'a>(
             remaining_tokens: tokens,
             message: "Missing operand.",
         });
+    } else if tokens[0].token_type == TokenType::NewLine {
+        return Err(ParseError {
+            remaining_tokens: &tokens[1..],
+            message: "Missing operand.",
+        });
     }
 
     match &tokens[0].token_type {
@@ -1280,10 +1287,14 @@ fn parse_factor<'a>(
         TokenType::LParen => {
             let (expression, expression_rest) = parse_relational_expression(&tokens[1..])?;
             return if let Some(expression_node) = expression {
-                if expression_rest.len() == 0 || expression_rest[0].token_type != TokenType::RParen
-                {
+                if expression_rest.len() == 0 {
                     return Err(ParseError {
                         remaining_tokens: expression_rest,
+                        message: "Missing closing parenthesis.",
+                    });
+                } else if expression_rest[0].token_type != TokenType::RParen {
+                    return Err(ParseError {
+                        remaining_tokens: &expression_rest[1..],
                         message: "Missing closing parenthesis.",
                     });
                 }
