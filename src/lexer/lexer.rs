@@ -1021,4 +1021,17 @@ mod tests {
             )
         }
     }
+
+    #[test]
+    fn test_lex_new_line() {
+        let input = "\n";
+        let mut tokenizer = Tokenizer::new(input.to_string());
+        let tokens = tokenizer.tokenize();
+
+        assert!(tokens.is_ok());
+        if let Ok(tokens_ok) = tokens {
+            assert_eq!(tokens_ok.len(), 1);
+            assert_eq!(tokens_ok[0], Token::new(TokenType::NewLine, 0, 1, 0, "\n"))
+        }
+    }
 }
