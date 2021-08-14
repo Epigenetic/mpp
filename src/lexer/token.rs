@@ -61,6 +61,7 @@ pub enum TokenType {
     Not,
     Equals,
     Identifier,
+    NewLine,
 }
 
 #[derive(PartialEq, Debug)]

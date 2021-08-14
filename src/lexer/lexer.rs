@@ -290,6 +290,13 @@ impl Tokenizer {
                     self.row += size;
                 }
                 '\n' => {
+                    tokens.push(Token::new(
+                        TokenType::NewLine,
+                        self.position,
+                        self.position + 1,
+                        self.line,
+                        &self.input[self.position..self.position + 1],
+                    ));
                     self.position += 1;
                     self.row = 0;
                     self.line += 1;
@@ -344,7 +351,7 @@ fn tokenize_number(input: &str, position: usize, line: usize) -> (Token, usize) 
         Token::new(
             TokenType::NumLit,
             position,
-            end - 1 + position,
+            end + position,
             line,
             &input[0..end],
         ),
@@ -543,11 +550,7 @@ fn tokenize_identifier(
                     message: "Percent can only be the first character in an identifier.",
                 })
             } else {
-                Err(TokenizeError {
-                    line,
-                    row: position + end,
-                    message: "Illegal character in identifier.",
-                })
+                break;
             };
         }
     }
