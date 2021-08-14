@@ -38,3 +38,8 @@ fn test_boolean_expression() {
 fn test_malformed_expression() {
     run_error_test("tests/expression_tests/malformed_expression.mtest")
 }
+
+#[test]
+fn test_variables() {
+    run_tests("tests/expression_tests/variable.mtest")
+}
