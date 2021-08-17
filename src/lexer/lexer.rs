@@ -264,6 +264,20 @@ impl Tokenizer {
                     self.position += size;
                     self.row += size;
                 }
+                'i' | 'I' => {
+                    let (token, size) =
+                        tokenize_if(&self.input[self.position..], self.position, self.line)?;
+                    tokens.push(token);
+                    self.position += size;
+                    self.row += size;
+                }
+                'e' | 'E' => {
+                    let (token, size) =
+                        tokenize_else(&self.input[self.position..], self.position, self.line)?;
+                    tokens.push(token);
+                    self.position += size;
+                    self.row += size;
+                }
                 '0'..='9' => {
                     let (token, size) =
                         tokenize_number(&self.input[self.position..], self.position, self.line);
@@ -529,6 +543,80 @@ fn tokenize_set(
                 &input[..3],
             ),
             3,
+        ));
+    }
+
+    // Identifier
+    return tokenize_identifier(input, position, line);
+}
+
+fn tokenize_if(input: &str, position: usize, line: usize) -> Result<(Token, usize), TokenizeError> {
+    let str_array: Vec<char> = input.chars().collect();
+
+    // One character new command (i or I)
+    if str_array.len() == 1 || str_array[1].is_whitespace() {
+        return Ok((
+            Token::new(
+                TokenType::Reserved(ReservedToken::If),
+                position,
+                position + 1,
+                line,
+                &input[..1],
+            ),
+            1,
+        ));
+    }
+
+    // Full if command
+    if &input[..2] == "if" || &input[..2] == "IF" {
+        return Ok((
+            Token::new(
+                TokenType::Reserved(ReservedToken::If),
+                position,
+                position + 2,
+                line,
+                &input[..2],
+            ),
+            2,
+        ));
+    }
+
+    // Identifier
+    return tokenize_identifier(input, position, line);
+}
+
+fn tokenize_else(
+    input: &str,
+    position: usize,
+    line: usize,
+) -> Result<(Token, usize), TokenizeError> {
+    let str_array: Vec<char> = input.chars().collect();
+
+    // One character new command (e or E)
+    if str_array.len() == 1 || str_array[1].is_whitespace() {
+        return Ok((
+            Token::new(
+                TokenType::Reserved(ReservedToken::Else),
+                position,
+                position + 1,
+                line,
+                &input[..1],
+            ),
+            1,
+        ));
+    }
+
+    // Full else command
+    if &input[..4] == "else" || &input[..4] == "ELSE" {
+        return Ok((
+            Token::new(
+                TokenType::Reserved(ReservedToken::Else),
+                position,
+                position + 4,
+                line,
+                &input[..4],
+            ),
+            4,
         ));
     }
 
@@ -1059,6 +1147,134 @@ mod tests {
             assert_eq!(
                 tokens_ok[0],
                 Token::new(TokenType::NotEquals, 0, 2, 0, "'=")
+            )
+        }
+    }
+
+    #[test]
+    fn test_lex_if_short() {
+        let input = "i";
+        let mut tokenizer = Tokenizer::new(input.to_string());
+        let tokens = tokenizer.tokenize();
+
+        assert!(tokens.is_ok());
+        if let Ok(tokens_ok) = tokens {
+            assert_eq!(tokens_ok.len(), 1);
+            assert_eq!(
+                tokens_ok[0],
+                Token::new(TokenType::Reserved(ReservedToken::If), 0, 1, 0, "i")
+            )
+        }
+    }
+
+    #[test]
+    fn test_lex_if_short_cap() {
+        let input = "I";
+        let mut tokenizer = Tokenizer::new(input.to_string());
+        let tokens = tokenizer.tokenize();
+
+        assert!(tokens.is_ok());
+        if let Ok(tokens_ok) = tokens {
+            assert_eq!(tokens_ok.len(), 1);
+            assert_eq!(
+                tokens_ok[0],
+                Token::new(TokenType::Reserved(ReservedToken::If), 0, 1, 0, "I")
+            )
+        }
+    }
+
+    #[test]
+    fn test_lex_if_long() {
+        let input = "if";
+        let mut tokenizer = Tokenizer::new(input.to_string());
+        let tokens = tokenizer.tokenize();
+
+        assert!(tokens.is_ok());
+        if let Ok(tokens_ok) = tokens {
+            assert_eq!(tokens_ok.len(), 1);
+            assert_eq!(
+                tokens_ok[0],
+                Token::new(TokenType::Reserved(ReservedToken::If), 0, 2, 0, "if")
+            )
+        }
+    }
+
+    #[test]
+    fn test_lex_if_long_cap() {
+        let input = "IF";
+        let mut tokenizer = Tokenizer::new(input.to_string());
+        let tokens = tokenizer.tokenize();
+
+        assert!(tokens.is_ok());
+        if let Ok(tokens_ok) = tokens {
+            assert_eq!(tokens_ok.len(), 1);
+            assert_eq!(
+                tokens_ok[0],
+                Token::new(TokenType::Reserved(ReservedToken::If), 0, 2, 0, "IF")
+            )
+        }
+    }
+
+    #[test]
+    fn test_lex_else_short() {
+        let input = "e";
+        let mut tokenizer = Tokenizer::new(input.to_string());
+        let tokens = tokenizer.tokenize();
+
+        assert!(tokens.is_ok());
+        if let Ok(tokens_ok) = tokens {
+            assert_eq!(tokens_ok.len(), 1);
+            assert_eq!(
+                tokens_ok[0],
+                Token::new(TokenType::Reserved(ReservedToken::Else), 0, 1, 0, "e")
+            )
+        }
+    }
+
+    #[test]
+    fn test_lex_else_short_cap() {
+        let input = "E";
+        let mut tokenizer = Tokenizer::new(input.to_string());
+        let tokens = tokenizer.tokenize();
+
+        assert!(tokens.is_ok());
+        if let Ok(tokens_ok) = tokens {
+            assert_eq!(tokens_ok.len(), 1);
+            assert_eq!(
+                tokens_ok[0],
+                Token::new(TokenType::Reserved(ReservedToken::Else), 0, 1, 0, "E")
+            )
+        }
+    }
+
+    #[test]
+    fn test_lex_else_long() {
+        let input = "else";
+        let mut tokenizer = Tokenizer::new(input.to_string());
+        let tokens = tokenizer.tokenize();
+
+        assert!(tokens.is_ok());
+        if let Ok(tokens_ok) = tokens {
+            assert_eq!(tokens_ok.len(), 1);
+            assert_eq!(
+                tokens_ok[0],
+                Token::new(TokenType::Reserved(ReservedToken::Else), 0, 4, 0, "else")
+            )
+        }
+    }
+
+    #[test]
+    fn test_lex_else_long_cap() {
+        let input = "ELSE";
+        let mut tokenizer = Tokenizer::new(input.to_string());
+        let tokens = tokenizer.tokenize();
+
+        assert!(tokens.is_ok());
+        if let Ok(tokens_ok) = tokens {
+            assert_eq!(tokens_ok.len(), 1);
+            assert_eq!(
+                tokens_ok[0],
+                Token::new(TokenType::Reserved(ReservedToken::Else), 0, 4, 0, "ELSE")
             )
         }
     }

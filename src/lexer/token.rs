@@ -78,6 +78,8 @@ pub enum ReservedToken {
     Write,
     New,
     Set,
+    If,
+    Else,
 }
 
 impl fmt::Display for TokenType {
