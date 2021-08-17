@@ -33,8 +33,8 @@ impl Tokenizer {
                 '+' => {
                     tokens.push(Token::new(
                         TokenType::Plus,
-                        self.position,
-                        self.position + 1,
+                        self.row,
+                        self.row + 1,
                         self.line,
                         &self.input[self.position..self.position + 1],
                     ));
@@ -44,8 +44,8 @@ impl Tokenizer {
                 '-' => {
                     tokens.push(Token::new(
                         TokenType::Minus,
-                        self.position,
-                        self.position + 1,
+                        self.row,
+                        self.row + 1,
                         self.line,
                         &self.input[self.position..self.position + 1],
                     ));
@@ -56,8 +56,8 @@ impl Tokenizer {
                     if self.position + 1 < self.input.len() && str_array[self.position + 1] == '*' {
                         tokens.push(Token::new(
                             TokenType::Power,
-                            self.position,
-                            self.position + 2,
+                            self.row,
+                            self.row + 2,
                             self.line,
                             &self.input[self.position..self.position + 2],
                         ));
@@ -66,8 +66,8 @@ impl Tokenizer {
                     } else {
                         tokens.push(Token::new(
                             TokenType::Times,
-                            self.position,
-                            self.position + 1,
+                            self.row,
+                            self.row + 1,
                             self.line,
                             &self.input[self.position..self.position + 1],
                         ));
@@ -78,8 +78,8 @@ impl Tokenizer {
                 '/' => {
                     tokens.push(Token::new(
                         TokenType::Divide,
-                        self.position,
-                        self.position + 1,
+                        self.row,
+                        self.row + 1,
                         self.line,
                         &self.input[self.position..self.position + 1],
                     ));
@@ -89,8 +89,8 @@ impl Tokenizer {
                 '#' => {
                     tokens.push(Token::new(
                         TokenType::Hash,
-                        self.position,
-                        self.position + 1,
+                        self.row,
+                        self.row + 1,
                         self.line,
                         &self.input[self.position..self.position + 1],
                     ));
@@ -100,8 +100,8 @@ impl Tokenizer {
                 '\\' => {
                     tokens.push(Token::new(
                         TokenType::IntDivide,
-                        self.position,
-                        self.position + 1,
+                        self.row,
+                        self.row + 1,
                         self.line,
                         &self.input[self.position..self.position + 1],
                     ));
@@ -111,8 +111,8 @@ impl Tokenizer {
                 '(' => {
                     tokens.push(Token::new(
                         TokenType::LParen,
-                        self.position,
-                        self.position + 1,
+                        self.row,
+                        self.row + 1,
                         self.line,
                         &self.input[self.position..self.position + 1],
                     ));
@@ -122,8 +122,8 @@ impl Tokenizer {
                 ')' => {
                     tokens.push(Token::new(
                         TokenType::RParen,
-                        self.position,
-                        self.position + 1,
+                        self.row,
+                        self.row + 1,
                         self.line,
                         &self.input[self.position..self.position + 1],
                     ));
@@ -133,8 +133,8 @@ impl Tokenizer {
                 ',' => {
                     tokens.push(Token::new(
                         TokenType::Comma,
-                        self.position,
-                        self.position + 1,
+                        self.row,
+                        self.row + 1,
                         self.line,
                         &self.input[self.position..self.position + 1],
                     ));
@@ -144,8 +144,8 @@ impl Tokenizer {
                 '!' => {
                     tokens.push(Token::new(
                         TokenType::Bang,
-                        self.position,
-                        self.position + 1,
+                        self.row,
+                        self.row + 1,
                         self.line,
                         &self.input[self.position..self.position + 1],
                     ));
@@ -155,8 +155,8 @@ impl Tokenizer {
                 '?' => {
                     tokens.push(Token::new(
                         TokenType::QuestionMark,
-                        self.position,
-                        self.position + 1,
+                        self.row,
+                        self.row + 1,
                         self.line,
                         &self.input[self.position..self.position + 1],
                     ));
@@ -167,8 +167,8 @@ impl Tokenizer {
                     if self.position + 1 < self.input.len() && str_array[self.position + 1] == '=' {
                         tokens.push(Token::new(
                             TokenType::GreaterThanOrEqualTo,
-                            self.position,
-                            self.position + 2,
+                            self.row,
+                            self.row + 2,
                             self.line,
                             &self.input[self.position..self.position + 2],
                         ));
@@ -177,8 +177,8 @@ impl Tokenizer {
                     } else {
                         tokens.push(Token::new(
                             TokenType::GreaterThan,
-                            self.position,
-                            self.position + 1,
+                            self.row,
+                            self.row + 1,
                             self.line,
                             &self.input[self.position..self.position + 1],
                         ));
@@ -190,8 +190,8 @@ impl Tokenizer {
                     if self.position + 1 < self.input.len() && str_array[self.position + 1] == '=' {
                         tokens.push(Token::new(
                             TokenType::LessThanOrEqualTo,
-                            self.position,
-                            self.position + 2,
+                            self.row,
+                            self.row + 2,
                             self.line,
                             &self.input[self.position..self.position + 2],
                         ));
@@ -200,8 +200,8 @@ impl Tokenizer {
                     } else {
                         tokens.push(Token::new(
                             TokenType::LessThan,
-                            self.position,
-                            self.position + 1,
+                            self.row,
+                            self.row + 1,
                             self.line,
                             &self.input[self.position..self.position + 1],
                         ));
@@ -213,8 +213,8 @@ impl Tokenizer {
                     if str_array.len() >= self.position && str_array[self.position + 1] == '=' {
                         tokens.push(Token::new(
                             TokenType::NotEquals,
-                            self.position,
-                            self.position + 2,
+                            self.row,
+                            self.row + 2,
                             self.line,
                             &self.input[self.position..self.position + 2],
                         ));
@@ -223,8 +223,8 @@ impl Tokenizer {
                     } else {
                         tokens.push(Token::new(
                             TokenType::Not,
-                            self.position,
-                            self.position + 1,
+                            self.row,
+                            self.row + 1,
                             self.line,
                             &self.input[self.position..self.position + 1],
                         ));
@@ -235,8 +235,8 @@ impl Tokenizer {
                 '=' => {
                     tokens.push(Token::new(
                         TokenType::Equals,
-                        self.position,
-                        self.position + 1,
+                        self.row,
+                        self.row + 1,
                         self.line,
                         &self.input[self.position..self.position + 1],
                     ));
@@ -245,42 +245,42 @@ impl Tokenizer {
                 }
                 'w' | 'W' => {
                     let (token, size) =
-                        tokenize_write(&self.input[self.position..], self.position, self.line)?;
+                        tokenize_write(&self.input[self.position..], self.row, self.line)?;
                     tokens.push(token);
                     self.position += size;
                     self.row += size;
                 }
                 'n' | 'N' => {
                     let (token, size) =
-                        tokenize_new(&self.input[self.position..], self.position, self.line)?;
+                        tokenize_new(&self.input[self.position..], self.row, self.line)?;
                     tokens.push(token);
                     self.position += size;
                     self.row += size;
                 }
                 's' | 'S' => {
                     let (token, size) =
-                        tokenize_set(&self.input[self.position..], self.position, self.line)?;
+                        tokenize_set(&self.input[self.position..], self.row, self.line)?;
                     tokens.push(token);
                     self.position += size;
                     self.row += size;
                 }
                 'i' | 'I' => {
                     let (token, size) =
-                        tokenize_if(&self.input[self.position..], self.position, self.line)?;
+                        tokenize_if(&self.input[self.position..], self.row, self.line)?;
                     tokens.push(token);
                     self.position += size;
                     self.row += size;
                 }
                 'e' | 'E' => {
                     let (token, size) =
-                        tokenize_else(&self.input[self.position..], self.position, self.line)?;
+                        tokenize_else(&self.input[self.position..], self.row, self.line)?;
                     tokens.push(token);
                     self.position += size;
                     self.row += size;
                 }
                 '0'..='9' => {
                     let (token, size) =
-                        tokenize_number(&self.input[self.position..], self.position, self.line);
+                        tokenize_number(&self.input[self.position..], self.row, self.line);
                     tokens.push(token);
                     self.position += size;
                     self.row += size;
@@ -290,7 +290,7 @@ impl Tokenizer {
                         && str_array[self.position + 1].is_digit(10)
                     {
                         let (token, size) =
-                            tokenize_number(&self.input[self.position..], self.position, self.line);
+                            tokenize_number(&self.input[self.position..], self.row, self.line);
                         tokens.push(token);
                         self.position += size;
                         self.row += size;
@@ -300,7 +300,7 @@ impl Tokenizer {
                 }
                 '"' => {
                     let (token, size) =
-                        tokenize_string(&self.input[self.position..], self.position, self.line)?;
+                        tokenize_string(&self.input[self.position..], self.row, self.line)?;
                     tokens.push(token);
                     self.position += size;
                     self.row += size;
@@ -318,8 +318,8 @@ impl Tokenizer {
                 '\n' => {
                     tokens.push(Token::new(
                         TokenType::NewLine,
-                        self.position,
-                        self.position + 1,
+                        self.row,
+                        self.row + 1,
                         self.line,
                         &self.input[self.position..self.position + 1],
                     ));
@@ -427,11 +427,7 @@ fn tokenize_string(
     ));
 }
 
-fn tokenize_write(
-    input: &str,
-    position: usize,
-    line: usize,
-) -> Result<(Token, usize), TokenizeError> {
+fn tokenize_write(input: &str, row: usize, line: usize) -> Result<(Token, usize), TokenizeError> {
     let str_array: Vec<char> = input.chars().collect();
 
     //One character write command (w or W)
@@ -439,8 +435,8 @@ fn tokenize_write(
         return Ok((
             Token::new(
                 TokenType::Reserved(ReservedToken::Write),
-                position,
-                position + 1,
+                row,
+                row + 1,
                 line,
                 &input[0..1],
             ),
@@ -457,8 +453,8 @@ fn tokenize_write(
         return Ok((
             Token::new(
                 TokenType::Reserved(ReservedToken::Write),
-                position,
-                position + 5,
+                row,
+                row + 5,
                 line,
                 &input[..5],
             ),
@@ -467,14 +463,10 @@ fn tokenize_write(
     }
 
     //Identifier
-    return tokenize_identifier(input, position, line);
+    return tokenize_identifier(input, row, line);
 }
 
-fn tokenize_new(
-    input: &str,
-    position: usize,
-    line: usize,
-) -> Result<(Token, usize), TokenizeError> {
+fn tokenize_new(input: &str, row: usize, line: usize) -> Result<(Token, usize), TokenizeError> {
     let str_array: Vec<char> = input.chars().collect();
 
     // One character new command (n or N)
@@ -482,8 +474,8 @@ fn tokenize_new(
         return Ok((
             Token::new(
                 TokenType::Reserved(ReservedToken::New),
-                position,
-                position + 1,
+                row,
+                row + 1,
                 line,
                 &input[..1],
             ),
@@ -500,8 +492,8 @@ fn tokenize_new(
         return Ok((
             Token::new(
                 TokenType::Reserved(ReservedToken::New),
-                position,
-                position + 3,
+                row,
+                row + 3,
                 line,
                 &input[..3],
             ),
@@ -510,14 +502,10 @@ fn tokenize_new(
     }
 
     // Identifier
-    return tokenize_identifier(input, position, line);
+    return tokenize_identifier(input, row, line);
 }
 
-fn tokenize_set(
-    input: &str,
-    position: usize,
-    line: usize,
-) -> Result<(Token, usize), TokenizeError> {
+fn tokenize_set(input: &str, row: usize, line: usize) -> Result<(Token, usize), TokenizeError> {
     let str_array: Vec<char> = input.chars().collect();
 
     // One character new command (n or N)
@@ -525,8 +513,8 @@ fn tokenize_set(
         return Ok((
             Token::new(
                 TokenType::Reserved(ReservedToken::Set),
-                position,
-                position + 1,
+                row,
+                row + 1,
                 line,
                 &input[..1],
             ),
@@ -543,8 +531,8 @@ fn tokenize_set(
         return Ok((
             Token::new(
                 TokenType::Reserved(ReservedToken::Set),
-                position,
-                position + 3,
+                row,
+                row + 3,
                 line,
                 &input[..3],
             ),
@@ -553,10 +541,10 @@ fn tokenize_set(
     }
 
     // Identifier
-    return tokenize_identifier(input, position, line);
+    return tokenize_identifier(input, row, line);
 }
 
-fn tokenize_if(input: &str, position: usize, line: usize) -> Result<(Token, usize), TokenizeError> {
+fn tokenize_if(input: &str, row: usize, line: usize) -> Result<(Token, usize), TokenizeError> {
     let str_array: Vec<char> = input.chars().collect();
 
     // One character new command (i or I)
@@ -564,8 +552,8 @@ fn tokenize_if(input: &str, position: usize, line: usize) -> Result<(Token, usiz
         return Ok((
             Token::new(
                 TokenType::Reserved(ReservedToken::If),
-                position,
-                position + 1,
+                row,
+                row + 1,
                 line,
                 &input[..1],
             ),
@@ -582,8 +570,8 @@ fn tokenize_if(input: &str, position: usize, line: usize) -> Result<(Token, usiz
         return Ok((
             Token::new(
                 TokenType::Reserved(ReservedToken::If),
-                position,
-                position + 2,
+                row,
+                row + 2,
                 line,
                 &input[..2],
             ),
@@ -592,14 +580,10 @@ fn tokenize_if(input: &str, position: usize, line: usize) -> Result<(Token, usiz
     }
 
     // Identifier
-    return tokenize_identifier(input, position, line);
+    return tokenize_identifier(input, row, line);
 }
 
-fn tokenize_else(
-    input: &str,
-    position: usize,
-    line: usize,
-) -> Result<(Token, usize), TokenizeError> {
+fn tokenize_else(input: &str, row: usize, line: usize) -> Result<(Token, usize), TokenizeError> {
     let str_array: Vec<char> = input.chars().collect();
 
     // One character new command (e or E)
@@ -607,8 +591,8 @@ fn tokenize_else(
         return Ok((
             Token::new(
                 TokenType::Reserved(ReservedToken::Else),
-                position,
-                position + 1,
+                row,
+                row + 1,
                 line,
                 &input[..1],
             ),
@@ -625,8 +609,8 @@ fn tokenize_else(
         return Ok((
             Token::new(
                 TokenType::Reserved(ReservedToken::Else),
-                position,
-                position + 4,
+                row,
+                row + 4,
                 line,
                 &input[..4],
             ),
@@ -635,12 +619,12 @@ fn tokenize_else(
     }
 
     // Identifier
-    return tokenize_identifier(input, position, line);
+    return tokenize_identifier(input, row, line);
 }
 
 fn tokenize_identifier(
     input: &str,
-    position: usize,
+    row: usize,
     line: usize,
 ) -> Result<(Token, usize), TokenizeError> {
     let str_array: Vec<char> = input.chars().collect();
@@ -660,7 +644,7 @@ fn tokenize_identifier(
             return if str_array[end] == '%' {
                 Err(TokenizeError {
                     line,
-                    row: position + end,
+                    row: row + end,
                     message: "Percent can only be the first character in an identifier.",
                 })
             } else {
@@ -670,13 +654,7 @@ fn tokenize_identifier(
     }
 
     return Ok((
-        Token::new(
-            TokenType::Identifier,
-            position,
-            position + end,
-            line,
-            &input[..end],
-        ),
+        Token::new(TokenType::Identifier, row, row + end, line, &input[..end]),
         end,
     ));
 }
