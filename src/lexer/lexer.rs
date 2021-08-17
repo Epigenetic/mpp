@@ -435,7 +435,7 @@ fn tokenize_write(
     let str_array: Vec<char> = input.chars().collect();
 
     //One character write command (w or W)
-    if str_array.len() == 1 || str_array[1].is_whitespace() {
+    if str_array.len() == 1 || str_array[1].is_whitespace() || !str_array[1].is_ascii_alphabetic() {
         return Ok((
             Token::new(
                 TokenType::Reserved(ReservedToken::Write),
@@ -450,7 +450,9 @@ fn tokenize_write(
 
     // Full write command
     if (&input[..5] == "write" || &input[..5] == "WRITE")
-        && (str_array.len() == 5 || str_array[5].is_whitespace())
+        && (str_array.len() == 5
+            || str_array[5].is_whitespace()
+            || !str_array[5].is_ascii_alphabetic())
     {
         return Ok((
             Token::new(
@@ -476,7 +478,7 @@ fn tokenize_new(
     let str_array: Vec<char> = input.chars().collect();
 
     // One character new command (n or N)
-    if str_array.len() == 1 || str_array[1].is_whitespace() {
+    if str_array.len() == 1 || str_array[1].is_whitespace() || !str_array[1].is_ascii_alphabetic() {
         return Ok((
             Token::new(
                 TokenType::Reserved(ReservedToken::New),
@@ -491,7 +493,9 @@ fn tokenize_new(
 
     // Full new command
     if (&input[..3] == "new" || &input[..3] == "NEW")
-        && (str_array.len() == 3 || str_array[3].is_whitespace())
+        && (str_array.len() == 3
+            || str_array[3].is_whitespace()
+            || !str_array[3].is_ascii_alphabetic())
     {
         return Ok((
             Token::new(
@@ -517,7 +521,7 @@ fn tokenize_set(
     let str_array: Vec<char> = input.chars().collect();
 
     // One character new command (n or N)
-    if str_array.len() == 1 || str_array[1].is_whitespace() {
+    if str_array.len() == 1 || str_array[1].is_whitespace() || !str_array[1].is_ascii_alphabetic() {
         return Ok((
             Token::new(
                 TokenType::Reserved(ReservedToken::Set),
@@ -532,7 +536,9 @@ fn tokenize_set(
 
     // Full new command
     if (&input[..3] == "set" || &input[..3] == "SET")
-        && (str_array.len() == 3 || str_array[3].is_whitespace())
+        && (str_array.len() == 3
+            || str_array[3].is_whitespace()
+            || !str_array[3].is_ascii_alphabetic())
     {
         return Ok((
             Token::new(
@@ -554,7 +560,7 @@ fn tokenize_if(input: &str, position: usize, line: usize) -> Result<(Token, usiz
     let str_array: Vec<char> = input.chars().collect();
 
     // One character new command (i or I)
-    if str_array.len() == 1 || str_array[1].is_whitespace() {
+    if str_array.len() == 1 || str_array[1].is_whitespace() || !str_array[1].is_ascii_alphabetic() {
         return Ok((
             Token::new(
                 TokenType::Reserved(ReservedToken::If),
@@ -568,7 +574,11 @@ fn tokenize_if(input: &str, position: usize, line: usize) -> Result<(Token, usiz
     }
 
     // Full if command
-    if &input[..2] == "if" || &input[..2] == "IF" {
+    if (&input[..2] == "if" || &input[..2] == "IF")
+        && (str_array.len() == 2
+            || str_array[2].is_whitespace()
+            || !str_array[2].is_ascii_alphabetic())
+    {
         return Ok((
             Token::new(
                 TokenType::Reserved(ReservedToken::If),
@@ -593,7 +603,7 @@ fn tokenize_else(
     let str_array: Vec<char> = input.chars().collect();
 
     // One character new command (e or E)
-    if str_array.len() == 1 || str_array[1].is_whitespace() {
+    if str_array.len() == 1 || str_array[1].is_whitespace() || !str_array[1].is_ascii_alphabetic() {
         return Ok((
             Token::new(
                 TokenType::Reserved(ReservedToken::Else),
@@ -607,7 +617,11 @@ fn tokenize_else(
     }
 
     // Full else command
-    if &input[..4] == "else" || &input[..4] == "ELSE" {
+    if (&input[..4] == "else" || &input[..4] == "ELSE")
+        && (str_array.len() == 4
+            || str_array[4].is_whitespace()
+            || !str_array[4].is_ascii_alphabetic())
+    {
         return Ok((
             Token::new(
                 TokenType::Reserved(ReservedToken::Else),
