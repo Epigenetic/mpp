@@ -126,7 +126,7 @@ fn parse_line<'a>(
             if statements_rest.len() == 0 || statements_rest[0].token_type != TokenType::NewLine {
                 Err(ParseError {
                     remaining_tokens: statements_rest,
-                    message: "Expecting end of line.",
+                    message: "Expected end of line.",
                 })
             } else {
                 Ok((
@@ -141,7 +141,7 @@ fn parse_line<'a>(
             if statement_rest.len() == 0 || statement_rest[0].token_type != TokenType::NewLine {
                 Err(ParseError {
                     remaining_tokens: statement_rest,
-                    message: "Expecting end of line.",
+                    message: "Expected end of line.",
                 })
             } else {
                 Ok((
@@ -154,7 +154,7 @@ fn parse_line<'a>(
         if statement_rest.len() == 0 || statement_rest[0].token_type != TokenType::NewLine {
             Err(ParseError {
                 remaining_tokens: statement_rest,
-                message: "Expecting end of line.",
+                message: "Expected end of line.",
             })
         } else {
             Ok((None, &tokens[1..]))
@@ -397,7 +397,7 @@ fn parse_identifier_list<'a>(
     if tokens.len() == 0 {
         return Err(ParseError {
             remaining_tokens: tokens,
-            message: "Expecting identifier.",
+            message: "Expected identifier.",
         });
     }
 
@@ -428,7 +428,7 @@ fn parse_identifier_list<'a>(
         }
         _ => Err(ParseError {
             remaining_tokens: tokens,
-            message: "Expecting identifier.",
+            message: "Expected identifier.",
         }),
     };
 }
