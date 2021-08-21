@@ -67,6 +67,8 @@ impl VM {
                 Ops::Get => self.execute_get(),
                 Ops::Equals => self.execute_equals(),
                 Ops::NotEquals => self.execute_not_equals(),
+                Ops::JumpIfFalse => self.execute_jump_if_false(),
+                Ops::Jump => self.execute_jump(),
             }
         }
     }
@@ -277,5 +279,24 @@ impl VM {
 
         self.stack.push(Rc::new(lhs.not_equals(&*rhs)));
         self.program_counter += 1;
+    }
+
+    fn execute_jump_if_false(&mut self) {
+        let operand = self.stack.pop().expect("No operand for jump if false");
+        let jump_bytes = &self.program[self.program_counter + 1..self.program_counter + 3];
+        let jump_addr = u16::from_le_bytes(jump_bytes.try_into().unwrap());
+
+        if !operand.boolean_interpretation() {
+            self.program_counter += jump_addr as usize
+        } else {
+            self.program_counter += 1 + std::mem::size_of::<u16>()
+        }
+    }
+
+    fn execute_jump(&mut self) {
+        let jump_bytes = &self.program[self.program_counter + 1..self.program_counter + 3];
+        let jump_addr = u16::from_le_bytes(jump_bytes.try_into().unwrap());
+
+        self.program_counter += jump_addr as usize
     }
 }

@@ -5,6 +5,7 @@
  */
 
 use crate::runtime::MVal;
+use std::convert::TryInto;
 
 #[repr(u8)]
 #[derive(Debug)]
@@ -33,6 +34,8 @@ pub enum Ops {
     Get = 22,
     Equals = 23,
     NotEquals = 24,
+    JumpIfFalse = 25,
+    Jump = 26,
 }
 
 impl Ops {
@@ -62,6 +65,8 @@ impl Ops {
             22 => Ops::Get,
             23 => Ops::Equals,
             24 => Ops::NotEquals,
+            25 => Ops::JumpIfFalse,
+            26 => Ops::Jump,
             op => panic!("Unrecognized op code {}", op),
         }
     }
@@ -71,6 +76,7 @@ pub fn print_program(program: &Vec<u8>) {
     let mut index = 0;
 
     while index < program.len() {
+        print!("{}:", index);
         match Ops::from_u8(program[index]) {
             Ops::Push => {
                 let (value, offset) = MVal::from_bytes(&program[index + 1..]);
@@ -168,6 +174,19 @@ pub fn print_program(program: &Vec<u8>) {
             Ops::NotEquals => {
                 println!("NOT_EQUALS");
                 index += 1;
+            }
+            Ops::JumpIfFalse => {
+                let jump_addr = &program[index + 1..index + 3];
+                println!(
+                    "JUMP_IF_FALSE {}",
+                    u16::from_le_bytes(jump_addr.try_into().unwrap())
+                );
+                index += 3;
+            }
+            Ops::Jump => {
+                let jump_addr = &program[index + 1..index + 3];
+                println!("JUMP {}", u16::from_le_bytes(jump_addr.try_into().unwrap()));
+                index += 3;
             }
         }
     }

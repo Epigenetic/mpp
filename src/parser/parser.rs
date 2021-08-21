@@ -58,7 +58,7 @@ pub fn print_parse_error(input: String, error: ParseError) {
         for _ in bad_token.start..bad_token.end {
             eprint!("^");
         }
-        eprintln!(" {}", error.message)
+        eprintln!(" {}", error.message);
     }
 }
 
@@ -193,7 +193,7 @@ fn parse_statements<'a>(
     };
 }
 
-/// Statement -> WriteStatement | SetStatement | NewStatement | ε
+/// Statement -> WriteStatement | SetStatement | NewStatement | IfStatement | ε
 fn parse_statement<'a>(
     tokens: &'a [Token],
 ) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
@@ -247,11 +247,119 @@ fn parse_statement<'a>(
                 unreachable!("WriteStatement cannot go to epsilon")
             }
         }
-        TokenType::NewLine => Ok((None, tokens)),
+        TokenType::Reserved(ReservedToken::If) => {
+            let (if_statement, if_statement_rest) = parse_if_statement(tokens)?;
+
+            if let Some(if_statement_node) = if_statement {
+                Ok((
+                    Some(ParserNode::new(
+                        vec![if_statement_node],
+                        ParserNodeType::Statement,
+                    )),
+                    if_statement_rest,
+                ))
+            } else {
+                unreachable!("IfStatement cannot go to epsilon.")
+            }
+        }
+        TokenType::NewLine | TokenType::Reserved(ReservedToken::Else) => Ok((None, tokens)),
         _ => Err(ParseError {
             remaining_tokens: tokens,
             message: "Illegal start of statement.",
         }),
+    };
+}
+
+/// IfStatement -> If EqualityExpression Statements ElseStatement
+/// TODO: Permit a block below the if expression, this may have to be handled by the do statement
+fn parse_if_statement<'a>(
+    tokens: &'a [Token],
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
+    return match &tokens[0].token_type {
+        TokenType::Reserved(ReservedToken::If) => {
+            let (equality_expression, equality_expression_rest) =
+                parse_equality_expression(&tokens[1..])?;
+
+            if let Some(equality_expression_node) = equality_expression {
+                let (statements, statements_rest) = parse_statements(equality_expression_rest)?;
+
+                if let Some(statements_node) = statements {
+                    if statements_rest[0].token_type != TokenType::NewLine {
+                        return Err(ParseError {
+                            remaining_tokens: statements_rest,
+                            message: "Expected end of line.",
+                        });
+                    }
+
+                    let (else_statement, else_statement_rest) =
+                        parse_else_statement(&statements_rest[1..])?;
+
+                    if let Some(else_statement_node) = else_statement {
+                        Ok((
+                            Some(ParserNode::new(
+                                vec![
+                                    equality_expression_node,
+                                    statements_node,
+                                    else_statement_node,
+                                ],
+                                ParserNodeType::IfStatement,
+                            )),
+                            else_statement_rest,
+                        ))
+                    } else {
+                        Ok((
+                            Some(ParserNode::new(
+                                vec![equality_expression_node, statements_node],
+                                ParserNodeType::IfStatement,
+                            )),
+                            statements_rest,
+                        ))
+                    }
+                } else {
+                    Err(ParseError {
+                        remaining_tokens: equality_expression_rest,
+                        message: "At least one statement after if expression required.",
+                    })
+                }
+            } else {
+                unreachable!("EqualityExpression cannot go to epsilon")
+            }
+        }
+        _ => Err(ParseError {
+            remaining_tokens: tokens,
+            message: "Expected if.",
+        }),
+    };
+}
+
+/// ElseStatement -> Else Statements | ε
+/// TODO: Permit a block below the if expression, this may have to be handled by the do statement
+fn parse_else_statement<'a>(
+    tokens: &'a [Token],
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
+    if tokens.len() == 0 || tokens[0].token_type == TokenType::NewLine {
+        return Ok((None, tokens));
+    }
+    return match &tokens[0].token_type {
+        TokenType::Reserved(ReservedToken::Else) => {
+            let (statements, statements_rest) = parse_statements(&tokens[1..])?;
+
+            if let Some(statements_node) = statements {
+                Ok((
+                    Some(ParserNode::new(
+                        vec![statements_node],
+                        ParserNodeType::ElseStatement,
+                    )),
+                    statements_rest,
+                ))
+            } else {
+                Err(ParseError {
+                    remaining_tokens: &tokens[1..],
+                    message: "At least one statement required after else",
+                })
+            }
+        }
+        _ => Ok((None, tokens)),
     };
 }
 

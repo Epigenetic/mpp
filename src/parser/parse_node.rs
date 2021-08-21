@@ -6,6 +6,7 @@
 
 use crate::parser::parse_node::ParserNodeType::Identifier;
 use crate::runtime::{MVal, Ops};
+use rust_decimal::prelude::ToPrimitive;
 use std::collections::HashMap;
 use std::fmt;
 
@@ -63,6 +64,62 @@ impl ParserNode<'_> {
                 // WriteStatement | SetStatement | NewStatement
                 self.children[0].to_bytes(program, variable_map)
             }
+
+            ParserNodeType::IfStatement => {
+                // EqualityExpression
+                self.children[0].to_bytes(program, variable_map);
+
+                program.push(Ops::JumpIfFalse as u8);
+                program.push(0xff);
+                program.push(0xff);
+                let if_start_pos = program.len();
+
+                // Statements
+                self.children[1].to_bytes(program, variable_map);
+
+                // Has an ElseStatement
+                if self.children.len() == 3 {
+                    program.push(Ops::Jump as u8);
+                    program.push(0xff);
+                    program.push(0xff);
+                    let else_start_pos = program.len();
+                    let if_end_pos = program.len();
+                    let if_offset = if_end_pos - if_start_pos;
+
+                    self.back_patch_jump(
+                        program,
+                        if_start_pos,
+                        if_offset + std::mem::size_of::<u16>() + 1,
+                    );
+
+                    // ElseStatement
+                    self.children[2].to_bytes(program, variable_map);
+
+                    let else_end_pos = program.len();
+                    let else_offset = else_end_pos - else_start_pos;
+
+                    self.back_patch_jump(
+                        program,
+                        else_start_pos,
+                        else_offset + std::mem::size_of::<u16>() + 1,
+                    );
+                } else {
+                    let end_pos = program.len();
+                    let offset = end_pos - if_start_pos;
+
+                    self.back_patch_jump(
+                        program,
+                        if_start_pos,
+                        offset + std::mem::size_of::<u16>() + 1,
+                    );
+                }
+            }
+
+            ParserNodeType::ElseStatement => {
+                // Statements
+                self.children[0].to_bytes(program, variable_map);
+            }
+
             ParserNodeType::NewStatement => {
                 // IdentifierList
                 self.children[0].to_bytes(program, variable_map)
@@ -372,6 +429,15 @@ impl ParserNode<'_> {
             }
         }
     }
+
+    fn back_patch_jump(&self, program: &mut Vec<u8>, start_pos: usize, jump_offset: usize) {
+        if jump_offset > std::u16::MAX as usize {
+            panic!("Offset greater than max jump length")
+        }
+        let offset_bytes: [u8; 2] = jump_offset.to_u16().unwrap().to_le_bytes();
+        program[start_pos - 2] = offset_bytes[0];
+        program[start_pos - 1] = offset_bytes[1];
+    }
 }
 
 impl fmt::Display for ParserNode<'_> {
@@ -384,6 +450,9 @@ impl fmt::Display for ParserNode<'_> {
 
             ParserNodeType::Statements => write!(f, "Statements"),
             ParserNodeType::Statement => write!(f, "Statement"),
+
+            ParserNodeType::IfStatement => write!(f, "IfStatement"),
+            ParserNodeType::ElseStatement => write!(f, "ElseStatement"),
 
             ParserNodeType::NewStatement => write!(f, "NewStatement"),
             ParserNodeType::IdentifierList => write!(f, "IdentifierList"),
@@ -455,6 +524,10 @@ pub enum ParserNodeType<'a> {
     FormatExpression,
     FormatExpressionTail,
     HashBangFormat,
+
+    IfStatement,
+
+    ElseStatement,
 
     EqualityExpression,
     EqualityExpressionTail,
