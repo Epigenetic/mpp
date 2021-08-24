@@ -157,7 +157,10 @@ fn parse_line<'a>(
                 message: "Expected end of line.",
             })
         } else {
-            Ok((None, &tokens[1..]))
+            Ok((
+                Some(ParserNode::new(Vec::new(), ParserNodeType::Line)),
+                &tokens[1..],
+            ))
         }
     };
 }

@@ -40,13 +40,15 @@ impl ParserNode<'_> {
                 }
             }
             ParserNodeType::Line => {
-                // Statement
-                self.children[0].to_bytes(program, variable_map);
+                if self.children.len() > 0 {
+                    // Statement
+                    self.children[0].to_bytes(program, variable_map);
 
-                // Has a LineTail
-                if self.children.len() == 2 {
-                    // LineTail
-                    self.children[1].to_bytes(program, variable_map)
+                    // Has a LineTail
+                    if self.children.len() == 2 {
+                        // LineTail
+                        self.children[1].to_bytes(program, variable_map)
+                    }
                 }
             }
 
