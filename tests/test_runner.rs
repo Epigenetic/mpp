@@ -4,12 +4,12 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
-use std::env;
-use std::fs::File;
+use std::fs::{DirEntry, File};
 use std::io::Read;
 use std::path::Path;
 use std::process::Command;
 use std::str;
+use std::{env, fs};
 
 pub fn run_tests(file_name: &str) {
     let path = Path::new(file_name);
@@ -47,7 +47,7 @@ fn execute_test(test: &str) {
     match command.output() {
         Err(e) => panic!("Error running compiler: {}", e),
         Ok(output) => assert_eq!(
-            str::from_utf8(&output.stdout).expect("unable to parse output to string"),
+            str::from_utf8(&output.stdout).expect("Unable to parse output to string"),
             test_assertion
         ),
     }
@@ -85,19 +85,60 @@ pub fn run_error_test(file_name: &str) {
         execute_error_test(lines[index], expected);
         index += offset;
     }
+}
 
-    fn execute_error_test(test: &str, expected: String) {
-        let mut test_string = String::from(test);
-        test_string.push('\n');
-        let mut command = Command::new(format!("./target/debug/mpp{}", env::consts::EXE_SUFFIX));
-        command.arg("-r").arg(test_string);
-        println!("Test: {}", test);
-        match command.output() {
-            Err(e) => panic!("Error running compiler: {}", e),
-            Ok(output) => assert_eq!(
-                str::from_utf8(&output.stderr).expect("unable to parse output to string"),
-                expected
-            ),
+fn execute_error_test(test: &str, expected: String) {
+    let mut test_string = String::from(test);
+    test_string.push('\n');
+    let mut command = Command::new(format!("./target/debug/mpp{}", env::consts::EXE_SUFFIX));
+    command.arg("-r").arg(test_string);
+    println!("Test: {}", test);
+    match command.output() {
+        Err(e) => panic!("Error running compiler: {}", e),
+        Ok(output) => assert_eq!(
+            str::from_utf8(&output.stderr).expect("Unable to parse output to string"),
+            expected
+        ),
+    }
+}
+
+#[test]
+fn foo() {
+    run_directory_tests(Path::new("tests/if_tests/passing"));
+}
+
+fn run_directory_tests(dir: &Path) {
+    for test_dir in fs::read_dir(dir).expect("Unable to read directory") {
+        run_directory_test(test_dir.expect("Error reading directory"))
+    }
+}
+
+fn run_directory_test(dir: DirEntry) {
+    let path = dir.path();
+    let input = path.join("input.m");
+    let mut output = match File::open(&path.join("output.txt").as_path()) {
+        Err(e) => panic!(
+            "Unable to open file {}/output.txt: {}",
+            path.to_str().unwrap(),
+            e
+        ),
+        Ok(file) => file,
+    };
+    let mut output_text = String::new();
+    if let Err(e) = output.read_to_string(&mut output_text) {
+        panic!("Unable to read file {:?}: {}", output, e)
+    }
+
+    let mut command = Command::new(format!("./target/debug/mpp{}", env::consts::EXE_SUFFIX));
+    command.arg("-f").arg(input);
+    println!("Test: {}", path.to_str().unwrap());
+    match command.output() {
+        Err(e) => panic!("Error running compiler: {}", e),
+        Ok(output) => {
+            assert_eq!(
+                str::from_utf8(&output.stdout).expect("Unable to parse output to string"),
+                output_text
+            )
         }
     }
 }
