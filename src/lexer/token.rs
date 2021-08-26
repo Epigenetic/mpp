@@ -70,6 +70,7 @@ pub enum TokenType {
     Reserved(ReservedToken),
 
     Comma,
+    Colon,
     NewLine,
 }
 
@@ -80,6 +81,7 @@ pub enum ReservedToken {
     Set,
     If,
     Else,
+    For,
 }
 
 impl fmt::Display for TokenType {
