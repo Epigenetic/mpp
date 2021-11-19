@@ -69,6 +69,8 @@ impl VM {
                 Ops::NotEquals => self.execute_not_equals(),
                 Ops::JumpIfFalse => self.execute_jump_if_false(),
                 Ops::Jump => self.execute_jump(),
+                Ops::JumpUp => self.execute_jump_up(),
+                Ops::Pop => self.execute_pop(),
             }
         }
     }
@@ -298,5 +300,17 @@ impl VM {
         let jump_addr = u16::from_le_bytes(jump_bytes.try_into().unwrap());
 
         self.program_counter += jump_addr as usize
+    }
+
+    fn execute_jump_up(&mut self) {
+        let jump_bytes = &self.program[self.program_counter + 1..self.program_counter + 3];
+        let jump_addr = u16::from_le_bytes(jump_bytes.try_into().unwrap());
+
+        self.program_counter -= jump_addr as usize
+    }
+
+    fn execute_pop(&mut self) {
+        self.stack.pop();
+        self.program_counter += 1;
     }
 }

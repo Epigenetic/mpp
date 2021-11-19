@@ -36,6 +36,8 @@ pub enum Ops {
     NotEquals = 24,
     JumpIfFalse = 25,
     Jump = 26,
+    JumpUp = 27,
+    Pop = 28,
 }
 
 impl Ops {
@@ -67,6 +69,8 @@ impl Ops {
             24 => Ops::NotEquals,
             25 => Ops::JumpIfFalse,
             26 => Ops::Jump,
+            27 => Ops::JumpUp,
+            28 => Ops::Pop,
             op => panic!("Unrecognized op code {}", op),
         }
     }
@@ -187,6 +191,18 @@ pub fn print_program(program: &Vec<u8>) {
                 let jump_addr = &program[index + 1..index + 3];
                 println!("JUMP {}", u16::from_le_bytes(jump_addr.try_into().unwrap()));
                 index += 3;
+            }
+            Ops::JumpUp => {
+                let jump_addr = &program[index + 1..index + 3];
+                println!(
+                    "JUMP_UP {}",
+                    u16::from_le_bytes(jump_addr.try_into().unwrap())
+                );
+                index += 3;
+            }
+            Ops::Pop => {
+                println!("POP");
+                index += 1;
             }
         }
     }
