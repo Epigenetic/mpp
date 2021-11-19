@@ -265,11 +265,163 @@ fn parse_statement<'a>(
                 unreachable!("IfStatement cannot go to epsilon.")
             }
         }
+        TokenType::Reserved(ReservedToken::For) => {
+            let (for_statement, for_statement_rest) = parse_for_statement(tokens)?;
+
+            if let Some(for_statement_node) = for_statement {
+                Ok((
+                    Some(ParserNode::new(
+                        vec![for_statement_node],
+                        ParserNodeType::Statement,
+                    )),
+                    for_statement_rest,
+                ))
+            } else {
+                unreachable!("ForStatement cannot go to epsilon.")
+            }
+        }
         TokenType::NewLine | TokenType::Reserved(ReservedToken::Else) => Ok((None, tokens)),
         _ => Err(ParseError {
             remaining_tokens: tokens,
             message: "Illegal start of statement.",
         }),
+    };
+}
+
+/// ForStatement -> For Identifier = ForBound Statements | For Statements
+fn parse_for_statement<'a>(
+    tokens: &'a [Token],
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
+    return match &tokens[0].token_type {
+        TokenType::Reserved(ReservedToken::For) => {
+            if tokens[1].token_type != TokenType::Identifier {
+                let (statements, statements_rest) = parse_statements(&tokens[1..])?;
+
+                if let Some(statements_node) = statements {
+                    Ok((
+                        Some(ParserNode::new(
+                            vec![statements_node],
+                            ParserNodeType::ForStatement,
+                        )),
+                        statements_rest,
+                    ))
+                } else {
+                    Err(ParseError {
+                        remaining_tokens: &tokens[1..],
+                        message: "Cannot have an empty for loop.",
+                    })
+                }
+            } else if tokens[2].token_type != TokenType::Equals {
+                Err(ParseError {
+                    remaining_tokens: &tokens[2..],
+                    message: "Expected equals",
+                })
+            } else {
+                let identifier_node =
+                    ParserNode::new(Vec::new(), ParserNodeType::Identifier(&tokens[1].value));
+
+                let (for_bound, for_bound_rest) = parse_for_bound(&tokens[3..], identifier_node)?;
+
+                if let Some(for_bound_node) = for_bound {
+                    let (statements, statements_rest) = parse_statements(for_bound_rest)?;
+
+                    if let Some(statements_node) = statements {
+                        Ok((
+                            Some(ParserNode::new(
+                                vec![for_bound_node, statements_node],
+                                ParserNodeType::ForStatement,
+                            )),
+                            statements_rest,
+                        ))
+                    } else {
+                        Err(ParseError {
+                            remaining_tokens: for_bound_rest,
+                            message: "Cannot have an empty for loop.",
+                        })
+                    }
+                } else {
+                    unreachable!("ForBoundList cannot go to epsilon")
+                }
+            }
+        }
+        _ => Err(ParseError {
+            remaining_tokens: tokens,
+            message: "Expecting for.",
+        }),
+    };
+}
+
+/// ForBound -> EqualityExpression | EqualityExpression : EqualityExpression
+///             | EqualityExpression : EqualityExpression : EqualityExpression | ε
+fn parse_for_bound<'a>(
+    tokens: &'a [Token],
+    identifier_node: ParserNode<'a>,
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
+    let (start_expression, start_expression_rest) = parse_equality_expression(tokens)?;
+
+    return if let Some(start_expression_node) = start_expression {
+        if start_expression_rest.len() == 0
+            || start_expression_rest[0].token_type != TokenType::Colon
+        {
+            Ok((
+                Some(ParserNode::new(
+                    vec![identifier_node, start_expression_node],
+                    ParserNodeType::ForBound,
+                )),
+                start_expression_rest,
+            ))
+        } else {
+            let (increment_expression, increment_expression_rest) =
+                parse_equality_expression(&start_expression_rest[1..])?;
+
+            if let Some(increment_expression_node) = increment_expression {
+                if increment_expression_rest.len() == 0
+                    || increment_expression_rest[0].token_type != TokenType::Colon
+                {
+                    Ok((
+                        Some(ParserNode::new(
+                            vec![
+                                identifier_node,
+                                start_expression_node,
+                                increment_expression_node,
+                            ],
+                            ParserNodeType::ForBound,
+                        )),
+                        &increment_expression_rest[0..],
+                    ))
+                } else {
+                    let (bound_expression, bound_expression_rest) =
+                        parse_equality_expression(&increment_expression_rest[1..])?;
+
+                    if let Some(bound_expression_node) = bound_expression {
+                        Ok((
+                            Some(ParserNode::new(
+                                vec![
+                                    identifier_node,
+                                    start_expression_node,
+                                    increment_expression_node,
+                                    bound_expression_node,
+                                ],
+                                ParserNodeType::ForBound,
+                            )),
+                            bound_expression_rest,
+                        ))
+                    } else {
+                        Err(ParseError {
+                            remaining_tokens: increment_expression_rest,
+                            message: "Missing bound expression.",
+                        })
+                    }
+                }
+            } else {
+                Err(ParseError {
+                    remaining_tokens: start_expression_rest,
+                    message: "Missing increment expression.",
+                })
+            }
+        }
+    } else {
+        Ok((None, tokens))
     };
 }
 

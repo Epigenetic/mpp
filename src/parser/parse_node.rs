@@ -67,6 +67,96 @@ impl ParserNode<'_> {
                 self.children[0].to_bytes(program, variable_map)
             }
 
+            ParserNodeType::ForStatement => {
+                // No bounds
+                if self.children[0].node_type == ParserNodeType::Statements {
+                    let start_pos = program.len();
+
+                    self.children[0].to_bytes(program, variable_map);
+
+                    let end_pos = program.len();
+
+                    program.push(Ops::JumpUp as u8);
+                    program.push(0xff);
+                    program.push(0xff);
+
+                    let offset = end_pos - start_pos;
+
+                    self.back_patch_jump(program, program.len(), offset);
+                } else {
+                    // TODO - Come up with a more elegant solution than hoisting the processing of the
+                    //        For bound into the for statement
+                    let for_bound_node = &self.children[0];
+
+                    // EqualityExpression
+                    for_bound_node.children[1].to_bytes(program, variable_map);
+                    program.push(Ops::Set as u8);
+
+                    //Identifier
+                    for_bound_node.children[0].to_bytes(program, variable_map);
+
+                    let loop_start_pos = program.len();
+                    let mut for_condition_pos: Option<usize> = None;
+
+                    // Has a third equality expression
+                    if for_bound_node.children.len() == 4 {
+                        program.push(Ops::Get as u8);
+
+                        // Identifier
+                        for_bound_node.children[0].to_bytes(program, variable_map);
+
+                        // EqualityExpression
+                        for_bound_node.children[3].to_bytes(program, variable_map);
+                        program.push(Ops::LessThanOrEqualTo as u8);
+
+                        // If should not loop jump over loop body
+                        program.push(Ops::JumpIfFalse as u8);
+                        program.push(0xff);
+                        program.push(0xff);
+                        for_condition_pos = Some(program.len());
+                    }
+
+                    // Statements
+                    self.children[1].to_bytes(program, variable_map);
+
+                    // Has a second EqualityExpression
+                    if for_bound_node.children.len() > 2 {
+                        // EqualityExpression
+                        for_bound_node.children[2].to_bytes(program, variable_map);
+                        program.push(Ops::Get as u8);
+
+                        // Identifier
+                        for_bound_node.children[0].to_bytes(program, variable_map);
+
+                        program.push(Ops::Add as u8);
+                        program.push(Ops::Set as u8);
+
+                        // Identifier
+                        for_bound_node.children[0].to_bytes(program, variable_map);
+                    }
+                    let end_pos = program.len();
+                    let offset = end_pos - loop_start_pos;
+
+                    program.push(Ops::JumpUp as u8);
+                    program.push(0xff);
+                    program.push(0xff);
+
+                    self.back_patch_jump(program, program.len(), offset);
+
+                    if let Some(for_condition_start) = for_condition_pos {
+                        self.back_patch_jump(
+                            program,
+                            for_condition_start,
+                            program.len() - for_condition_start + 3,
+                        )
+                    }
+                }
+            }
+
+            ParserNodeType::ForBound => {
+                panic!("Should not be calling to_bytes for ForBound")
+            }
+
             ParserNodeType::IfStatement => {
                 // EqualityExpression
                 self.children[0].to_bytes(program, variable_map);
@@ -432,6 +522,11 @@ impl ParserNode<'_> {
         }
     }
 
+    /// Back patch a jump to the final value. Validates jump is not larger than max jump size.
+    /// # Parameters
+    /// * `program` - Program vector to update
+    /// * `start_pos` - Where the patch should start
+    /// * `jump_offset` - Length of the jump
     fn back_patch_jump(&self, program: &mut Vec<u8>, start_pos: usize, jump_offset: usize) {
         if jump_offset > std::u16::MAX as usize {
             panic!("Offset greater than max jump length")
@@ -452,6 +547,9 @@ impl fmt::Display for ParserNode<'_> {
 
             ParserNodeType::Statements => write!(f, "Statements"),
             ParserNodeType::Statement => write!(f, "Statement"),
+
+            ParserNodeType::ForStatement => write!(f, "ForStatement"),
+            ParserNodeType::ForBound => write!(f, "ForBound"),
 
             ParserNodeType::IfStatement => write!(f, "IfStatement"),
             ParserNodeType::ElseStatement => write!(f, "ElseStatement"),
@@ -530,6 +628,9 @@ pub enum ParserNodeType<'a> {
     IfStatement,
 
     ElseStatement,
+
+    ForStatement,
+    ForBound,
 
     EqualityExpression,
     EqualityExpressionTail,
