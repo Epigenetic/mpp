@@ -270,7 +270,7 @@ impl Tokenizer {
                 }
                 's' | 'S' => {
                     let (token, size) =
-                        tokenize_set_or_str(&self.input[self.position..], self.row, self.line)?;
+                        tokenize_set_or_string(&self.input[self.position..], self.row, self.line)?;
                     tokens.push(token);
                     self.position += size;
                     self.row += size;
@@ -292,6 +292,13 @@ impl Tokenizer {
                 'f' | 'F' => {
                     let (token, size) =
                         tokenize_for(&self.input[self.position..], self.row, self.line)?;
+                    tokens.push(token);
+                    self.position += size;
+                    self.row += size;
+                }
+                'd' | 'D' => {
+                    let (token, size) =
+                        tokenize_do_or_double(&self.input[self.position..], self.row, self.line)?;
                     tokens.push(token);
                     self.position += size;
                     self.row += size;
@@ -523,7 +530,7 @@ fn tokenize_new(input: &str, row: usize, line: usize) -> Result<(Token, usize), 
     return tokenize_identifier(input, row, line);
 }
 
-fn tokenize_set_or_str(
+fn tokenize_set_or_string(
     input: &str,
     row: usize,
     line: usize,
@@ -545,30 +552,38 @@ fn tokenize_set_or_str(
     }
 
     // Full set command
-    if str_array.len() == 3 || str_array[3].is_whitespace() || !str_array[3].is_ascii_alphabetic() {
-        if &input[..3] == "set" || &input[..3] == "SET" {
-            return Ok((
-                Token::new(
-                    TokenType::Reserved(ReservedToken::Set),
-                    row,
-                    row + 3,
-                    line,
-                    &input[..3],
-                ),
-                3,
-            ));
-        } else if &input[..3] == "str" || &input[..3] == "STR" {
-            return Ok((
-                Token::new(
-                    TokenType::Reserved(ReservedToken::Str),
-                    row,
-                    row + 3,
-                    line,
-                    &input[..3],
-                ),
-                3,
-            ));
-        }
+    if (&input[..3] == "set" || &input[..3] == "SET")
+        && (str_array.len() == 3
+            || str_array[3].is_whitespace()
+            || !str_array[3].is_ascii_alphabetic())
+    {
+        return Ok((
+            Token::new(
+                TokenType::Reserved(ReservedToken::Set),
+                row,
+                row + 3,
+                line,
+                &input[..3],
+            ),
+            3,
+        ));
+    }
+
+    if (&input[..6] == "string" || &input[..6] == "STRING")
+        && (str_array.len() == 6
+            || str_array[6].is_whitespace()
+            || !str_array[6].is_ascii_alphabetic())
+    {
+        return Ok((
+            Token::new(
+                TokenType::Reserved(ReservedToken::String),
+                row,
+                row + 6,
+                line,
+                &input[..6],
+            ),
+            6,
+        ));
     }
 
     // Identifier
@@ -712,6 +727,37 @@ fn tokenize_for(input: &str, row: usize, line: usize) -> Result<(Token, usize), 
     }
 
     // Identifier
+    return tokenize_identifier(input, row, line);
+}
+
+fn tokenize_do_or_double(
+    input: &str,
+    row: usize,
+    line: usize,
+) -> Result<(Token, usize), TokenizeError> {
+    let str_array: Vec<char> = input.chars().collect();
+
+    //TODO Lex do
+
+    // Double keyword
+    if (&input[..6] == "double" || &input[..6] == "DOUBLE")
+        && (str_array.len() == 6
+            || str_array[6].is_whitespace()
+            || !str_array[6].is_ascii_alphabetic())
+    {
+        return Ok((
+            Token::new(
+                TokenType::Reserved(ReservedToken::Double),
+                row,
+                row + 6,
+                line,
+                &input[..6],
+            ),
+            6,
+        ));
+    }
+
+    //Identifier
     return tokenize_identifier(input, row, line);
 }
 
@@ -1215,10 +1261,10 @@ mod tests {
     }
     //endregion
 
-    //region Lex Str Tests
+    //region Lex String Tests
     #[test]
-    fn test_lex_str() {
-        let input = "str";
+    fn test_lex_string() {
+        let input = "string";
         let mut tokenizer = Tokenizer::new(input.to_string());
         let tokens = tokenizer.tokenize();
 
@@ -1227,14 +1273,20 @@ mod tests {
             assert_eq!(tokens_ok.len(), 1);
             assert_eq!(
                 tokens_ok[0],
-                Token::new(TokenType::Reserved(ReservedToken::Str), 0, 3, 0, "str")
+                Token::new(
+                    TokenType::Reserved(ReservedToken::String),
+                    0,
+                    6,
+                    0,
+                    "string"
+                )
             )
         }
     }
 
     #[test]
-    fn test_lex_str_cap() {
-        let input = "STR";
+    fn test_lex_string_cap() {
+        let input = "STRING";
         let mut tokenizer = Tokenizer::new(input.to_string());
         let tokens = tokenizer.tokenize();
 
@@ -1243,7 +1295,59 @@ mod tests {
             assert_eq!(tokens_ok.len(), 1);
             assert_eq!(
                 tokens_ok[0],
-                Token::new(TokenType::Reserved(ReservedToken::Str), 0, 3, 0, "STR")
+                Token::new(
+                    TokenType::Reserved(ReservedToken::String),
+                    0,
+                    6,
+                    0,
+                    "STRING"
+                )
+            )
+        }
+    }
+    //endregion
+
+    //region Lex Double Tests
+    #[test]
+    fn test_lex_double() {
+        let input = "double";
+        let mut tokenizer = Tokenizer::new(input.to_string());
+        let tokens = tokenizer.tokenize();
+
+        assert!(tokens.is_ok());
+        if let Ok(tokens_ok) = tokens {
+            assert_eq!(tokens_ok.len(), 1);
+            assert_eq!(
+                tokens_ok[0],
+                Token::new(
+                    TokenType::Reserved(ReservedToken::Double),
+                    0,
+                    6,
+                    0,
+                    "double"
+                )
+            )
+        }
+    }
+
+    #[test]
+    fn test_lex_double_cap() {
+        let input = "DOUBLE";
+        let mut tokenizer = Tokenizer::new(input.to_string());
+        let tokens = tokenizer.tokenize();
+
+        assert!(tokens.is_ok());
+        if let Ok(tokens_ok) = tokens {
+            assert_eq!(tokens_ok.len(), 1);
+            assert_eq!(
+                tokens_ok[0],
+                Token::new(
+                    TokenType::Reserved(ReservedToken::Double),
+                    0,
+                    6,
+                    0,
+                    "DOUBLE"
+                )
             )
         }
     }
