@@ -526,7 +526,7 @@ fn tokenize_new(input: &str, row: usize, line: usize) -> Result<(Token, usize), 
 fn tokenize_set(input: &str, row: usize, line: usize) -> Result<(Token, usize), TokenizeError> {
     let str_array: Vec<char> = input.chars().collect();
 
-    // One character new command (n or N)
+    // One character set command (s or S)
     if str_array.len() == 1 || str_array[1].is_whitespace() || !str_array[1].is_ascii_alphabetic() {
         return Ok((
             Token::new(
@@ -565,7 +565,7 @@ fn tokenize_set(input: &str, row: usize, line: usize) -> Result<(Token, usize), 
 fn tokenize_if(input: &str, row: usize, line: usize) -> Result<(Token, usize), TokenizeError> {
     let str_array: Vec<char> = input.chars().collect();
 
-    // One character new command (i or I)
+    // One character if command (i or I)
     if str_array.len() == 1 || str_array[1].is_whitespace() || !str_array[1].is_ascii_alphabetic() {
         return Ok((
             Token::new(
@@ -604,7 +604,7 @@ fn tokenize_if(input: &str, row: usize, line: usize) -> Result<(Token, usize), T
 fn tokenize_else(input: &str, row: usize, line: usize) -> Result<(Token, usize), TokenizeError> {
     let str_array: Vec<char> = input.chars().collect();
 
-    // One character new command (e or E)
+    // One character else command (e or E)
     if str_array.len() == 1 || str_array[1].is_whitespace() || !str_array[1].is_ascii_alphabetic() {
         return Ok((
             Token::new(
@@ -643,7 +643,7 @@ fn tokenize_else(input: &str, row: usize, line: usize) -> Result<(Token, usize),
 fn tokenize_for(input: &str, row: usize, line: usize) -> Result<(Token, usize), TokenizeError> {
     let str_array: Vec<char> = input.chars().collect();
 
-    // One character command (f or F)
+    // One character for command (f or F)
     if str_array.len() == 1 || str_array[1].is_whitespace() || !str_array[1].is_ascii_alphabetic() {
         return Ok((
             Token::new(
