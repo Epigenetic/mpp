@@ -270,14 +270,14 @@ impl Tokenizer {
                 }
                 's' | 'S' => {
                     let (token, size) =
-                        tokenize_set(&self.input[self.position..], self.row, self.line)?;
+                        tokenize_set_or_str(&self.input[self.position..], self.row, self.line)?;
                     tokens.push(token);
                     self.position += size;
                     self.row += size;
                 }
                 'i' | 'I' => {
                     let (token, size) =
-                        tokenize_if(&self.input[self.position..], self.row, self.line)?;
+                        tokenize_if_or_int(&self.input[self.position..], self.row, self.line)?;
                     tokens.push(token);
                     self.position += size;
                     self.row += size;
@@ -523,7 +523,11 @@ fn tokenize_new(input: &str, row: usize, line: usize) -> Result<(Token, usize), 
     return tokenize_identifier(input, row, line);
 }
 
-fn tokenize_set(input: &str, row: usize, line: usize) -> Result<(Token, usize), TokenizeError> {
+fn tokenize_set_or_str(
+    input: &str,
+    row: usize,
+    line: usize,
+) -> Result<(Token, usize), TokenizeError> {
     let str_array: Vec<char> = input.chars().collect();
 
     // One character set command (s or S)
@@ -540,29 +544,42 @@ fn tokenize_set(input: &str, row: usize, line: usize) -> Result<(Token, usize), 
         ));
     }
 
-    // Full new command
-    if (&input[..3] == "set" || &input[..3] == "SET")
-        && (str_array.len() == 3
-            || str_array[3].is_whitespace()
-            || !str_array[3].is_ascii_alphabetic())
-    {
-        return Ok((
-            Token::new(
-                TokenType::Reserved(ReservedToken::Set),
-                row,
-                row + 3,
-                line,
-                &input[..3],
-            ),
-            3,
-        ));
+    // Full set command
+    if str_array.len() == 3 || str_array[3].is_whitespace() || !str_array[3].is_ascii_alphabetic() {
+        if &input[..3] == "set" || &input[..3] == "SET" {
+            return Ok((
+                Token::new(
+                    TokenType::Reserved(ReservedToken::Set),
+                    row,
+                    row + 3,
+                    line,
+                    &input[..3],
+                ),
+                3,
+            ));
+        } else if &input[..3] == "str" || &input[..3] == "STR" {
+            return Ok((
+                Token::new(
+                    TokenType::Reserved(ReservedToken::Str),
+                    row,
+                    row + 3,
+                    line,
+                    &input[..3],
+                ),
+                3,
+            ));
+        }
     }
 
     // Identifier
     return tokenize_identifier(input, row, line);
 }
 
-fn tokenize_if(input: &str, row: usize, line: usize) -> Result<(Token, usize), TokenizeError> {
+fn tokenize_if_or_int(
+    input: &str,
+    row: usize,
+    line: usize,
+) -> Result<(Token, usize), TokenizeError> {
     let str_array: Vec<char> = input.chars().collect();
 
     // One character if command (i or I)
@@ -594,6 +611,24 @@ fn tokenize_if(input: &str, row: usize, line: usize) -> Result<(Token, usize), T
                 &input[..2],
             ),
             2,
+        ));
+    }
+
+    // Int keyword
+    if (&input[..3] == "int" || &input[..3] == "INT")
+        && (str_array.len() == 3
+            || str_array[3].is_whitespace()
+            || !str_array[3].is_ascii_alphabetic())
+    {
+        return Ok((
+            Token::new(
+                TokenType::Reserved(ReservedToken::Int),
+                row,
+                row + 3,
+                line,
+                &input[..3],
+            ),
+            3,
         ));
     }
 
@@ -1149,6 +1184,38 @@ mod tests {
     }
 
     #[test]
+    fn test_lex_str() {
+        let input = "str";
+        let mut tokenizer = Tokenizer::new(input.to_string());
+        let tokens = tokenizer.tokenize();
+
+        assert!(tokens.is_ok());
+        if let Ok(tokens_ok) = tokens {
+            assert_eq!(tokens_ok.len(), 1);
+            assert_eq!(
+                tokens_ok[0],
+                Token::new(TokenType::Reserved(ReservedToken::Str), 0, 3, 0, "str")
+            )
+        }
+    }
+
+    #[test]
+    fn test_lex_str_cap() {
+        let input = "STR";
+        let mut tokenizer = Tokenizer::new(input.to_string());
+        let tokens = tokenizer.tokenize();
+
+        assert!(tokens.is_ok());
+        if let Ok(tokens_ok) = tokens {
+            assert_eq!(tokens_ok.len(), 1);
+            assert_eq!(
+                tokens_ok[0],
+                Token::new(TokenType::Reserved(ReservedToken::Str), 0, 3, 0, "STR")
+            )
+        }
+    }
+
+    #[test]
     fn test_lex_identifier() {
         let input = "foo %foo foo123";
         let mut tokenizer = Tokenizer::new(input.to_string());
@@ -1261,6 +1328,38 @@ mod tests {
             assert_eq!(
                 tokens_ok[0],
                 Token::new(TokenType::Reserved(ReservedToken::If), 0, 2, 0, "IF")
+            )
+        }
+    }
+
+    #[test]
+    fn test_lex_int() {
+        let input = "int";
+        let mut tokenizer = Tokenizer::new(input.to_string());
+        let tokens = tokenizer.tokenize();
+
+        assert!(tokens.is_ok());
+        if let Ok(tokens_ok) = tokens {
+            assert_eq!(tokens_ok.len(), 1);
+            assert_eq!(
+                tokens_ok[0],
+                Token::new(TokenType::Reserved(ReservedToken::Int), 0, 3, 0, "int")
+            )
+        }
+    }
+
+    #[test]
+    fn test_lex_int_cap() {
+        let input = "INT";
+        let mut tokenizer = Tokenizer::new(input.to_string());
+        let tokens = tokenizer.tokenize();
+
+        assert!(tokens.is_ok());
+        if let Ok(tokens_ok) = tokens {
+            assert_eq!(tokens_ok.len(), 1);
+            assert_eq!(
+                tokens_ok[0],
+                Token::new(TokenType::Reserved(ReservedToken::Int), 0, 3, 0, "INT")
             )
         }
     }

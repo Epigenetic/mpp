@@ -82,6 +82,8 @@ pub enum ReservedToken {
     If,
     Else,
     For,
+    Int,
+    Str,
 }
 
 impl fmt::Display for TokenType {
