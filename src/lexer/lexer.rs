@@ -762,6 +762,7 @@ pub struct TokenizeError<'a> {
 mod tests {
     use super::*;
 
+    //region Lex Arithmetic Operators Tests
     #[test]
     fn test_lex_plus() {
         let input = String::from("+");
@@ -830,7 +831,9 @@ mod tests {
             assert_eq!(tokens_ok[0], Token::new(TokenType::Divide, 0, 1, 0, "/"));
         }
     }
+    //endregion
 
+    //region Lex Number Tests
     #[test]
     fn test_lex_number() {
         let input = "123";
@@ -848,7 +851,9 @@ mod tests {
         assert_eq!(token, Token::new(TokenType::NumLit, 5, 12, 0, "123.456",));
         assert_eq!(position, 7);
     }
+    //endregion
 
+    //region Lex Parentheses Tests
     #[test]
     fn test_lex_l_paren() {
         let input = "(";
@@ -874,7 +879,9 @@ mod tests {
             assert_eq!(tokens_ok[0], Token::new(TokenType::RParen, 0, 1, 0, ")"));
         }
     }
+    //endregion
 
+    //region Lex Write Tests
     #[test]
     fn test_lex_write_short() {
         let input = "w";
@@ -938,7 +945,9 @@ mod tests {
             )
         }
     }
+    //endregion
 
+    //region Lex Write Format Tests
     #[test]
     fn test_lex_bang() {
         let input = "!";
@@ -980,7 +989,9 @@ mod tests {
             )
         }
     }
+    //endregion
 
+    //region Lex Comparison Operators Tests
     #[test]
     fn test_lex_greater_than() {
         let input = ">";
@@ -1056,6 +1067,24 @@ mod tests {
     }
 
     #[test]
+    fn test_lex_not_equals() {
+        let input = "'=";
+        let mut tokenizer = Tokenizer::new(input.to_string());
+        let tokens = tokenizer.tokenize();
+
+        assert!(tokens.is_ok());
+        if let Ok(tokens_ok) = tokens {
+            assert_eq!(tokens_ok.len(), 1);
+            assert_eq!(
+                tokens_ok[0],
+                Token::new(TokenType::NotEquals, 0, 2, 0, "'=")
+            )
+        }
+    }
+    //endregion
+
+    //region Lex New Tests
+    #[test]
     fn test_lex_new_short() {
         let input = "n";
         let mut tokenizer = Tokenizer::new(input.to_string());
@@ -1118,7 +1147,9 @@ mod tests {
             )
         }
     }
+    //endregion
 
+    //region Lex Set Tests
     #[test]
     fn test_lex_set_short() {
         let input = "s";
@@ -1182,7 +1213,9 @@ mod tests {
             )
         }
     }
+    //endregion
 
+    //region Lex Str Tests
     #[test]
     fn test_lex_str() {
         let input = "str";
@@ -1214,6 +1247,7 @@ mod tests {
             )
         }
     }
+    //endregion
 
     #[test]
     fn test_lex_identifier() {
@@ -1252,22 +1286,7 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_lex_not_equals() {
-        let input = "'=";
-        let mut tokenizer = Tokenizer::new(input.to_string());
-        let tokens = tokenizer.tokenize();
-
-        assert!(tokens.is_ok());
-        if let Ok(tokens_ok) = tokens {
-            assert_eq!(tokens_ok.len(), 1);
-            assert_eq!(
-                tokens_ok[0],
-                Token::new(TokenType::NotEquals, 0, 2, 0, "'=")
-            )
-        }
-    }
-
+    //region Lex If Tests
     #[test]
     fn test_lex_if_short() {
         let input = "i";
@@ -1331,7 +1350,9 @@ mod tests {
             )
         }
     }
+    //endregion
 
+    //region Lex Int Tests
     #[test]
     fn test_lex_int() {
         let input = "int";
@@ -1363,7 +1384,9 @@ mod tests {
             )
         }
     }
+    //endregion
 
+    //regions Lex Else Tests
     #[test]
     fn test_lex_else_short() {
         let input = "e";
@@ -1427,6 +1450,7 @@ mod tests {
             )
         }
     }
+    //endregion
 
     #[test]
     fn test_lex_colon() {
@@ -1441,6 +1465,7 @@ mod tests {
         }
     }
 
+    //region Lex For Tests
     #[test]
     fn test_lex_for_short() {
         let input = "f";
@@ -1504,4 +1529,5 @@ mod tests {
             )
         }
     }
+    //endregion
 }
