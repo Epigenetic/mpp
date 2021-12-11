@@ -4,13 +4,11 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
-use crate::runtime::mval::MVal;
+use crate::runtime::mval::{MVal, MValType};
 use crate::runtime::Ops;
 use crossterm::cursor::{position, MoveTo};
 use crossterm::terminal::{Clear, ClearType};
 use crossterm::ExecutableCommand;
-use rust_decimal::prelude::ToPrimitive;
-use rust_decimal::Decimal;
 use std::convert::TryInto;
 use std::io;
 use std::io::{stdout, Write};
@@ -141,9 +139,7 @@ impl VM {
     fn execute_to_number(&mut self) {
         let operand = self.stack.pop().expect("No operand for to number");
 
-        self.stack.push(Rc::new(MVal::from_string_no_sanitize(
-            operand.numeric_interpretation().to_string(),
-        )));
+        self.stack.push(Rc::new((*operand).clone()));
         self.program_counter += 1;
     }
 
@@ -151,7 +147,7 @@ impl VM {
         let operand = self.stack.pop().expect("No operand for to negative number");
 
         self.stack.push(Rc::new(MVal::from_string_no_sanitize(
-            (operand.numeric_interpretation() * Decimal::from(-1)).to_string(),
+            (-&*operand).to_string(),
         )));
         self.program_counter += 1;
     }
@@ -159,7 +155,7 @@ impl VM {
     fn execute_write(&mut self) {
         let operand = self.stack.pop().expect("No operand for write");
 
-        print!("{}", operand.string_interpretation());
+        print!("{}", operand);
         io::stdout().flush().expect("Issue flushing stdout");
         self.program_counter += 1;
     }
@@ -182,13 +178,14 @@ impl VM {
     fn execute_write_to_col(&mut self) {
         let (x, y) = position().expect("Unable to read cursor position");
 
-        let col = self
-            .stack
-            .pop()
-            .expect("No operand for write to col")
-            .numeric_interpretation()
-            .to_u16()
-            .unwrap();
+        let col_mval = self.stack.pop().expect("No operand for write to col");
+        let col = if col_mval.value_type == MValType::Int {
+            col_mval.get_int_val() as u16
+        } else if col_mval.value_type == MValType::Double {
+            col_mval.get_double_val() as u16
+        } else {
+            panic!("Column offset not numeric")
+        };
 
         if x < col {
             stdout()
@@ -288,7 +285,11 @@ impl VM {
         let jump_bytes = &self.program[self.program_counter + 1..self.program_counter + 3];
         let jump_addr = u16::from_le_bytes(jump_bytes.try_into().unwrap());
 
-        if !operand.boolean_interpretation() {
+        if operand.value_type != MValType::Boolean {
+            panic!("Operand not boolean")
+        }
+
+        if !operand.get_boolean_val() {
             self.program_counter += jump_addr as usize
         } else {
             self.program_counter += 1 + std::mem::size_of::<u16>()
