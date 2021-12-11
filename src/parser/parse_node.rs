@@ -6,7 +6,6 @@
 
 use crate::parser::parse_node::ParserNodeType::Identifier;
 use crate::runtime::{MVal, Ops};
-use rust_decimal::prelude::ToPrimitive;
 use std::collections::HashMap;
 use std::fmt;
 
@@ -531,7 +530,7 @@ impl ParserNode<'_> {
         if jump_offset > std::u16::MAX as usize {
             panic!("Offset greater than max jump length")
         }
-        let offset_bytes: [u8; 2] = jump_offset.to_u16().unwrap().to_le_bytes();
+        let offset_bytes: [u8; 2] = (jump_offset as u16).to_le_bytes();
         program[start_pos - 2] = offset_bytes[0];
         program[start_pos - 1] = offset_bytes[1];
     }
