@@ -1,0 +1,46 @@
+ANSI M:
+
+foo(bar,baz)
+	w bar+baz
+	q
+
+MPP:
+
+foo(bar:int,baz:int):void{
+	w bar+baz
+}
+
+ANSI M:
+
+foo(bar,baz)
+	s baz=bar
+	q
+
+MPP:
+
+foo(bar:int,out baz:int):void{
+	s baz=bar
+}
+
+ANSI M:
+
+foo(bar,baz)
+	q foo+bar
+	
+MPP:
+
+foo(bar:int,baz:int):int{
+	q foo+bar
+}
+
+ANSI M:
+
+foo(bar,baz)
+	s bar(baz)=1
+	q
+
+MPP:
+
+foo(ref bar:arr<str,int>,baz:str):void{
+	s bar(baz)=1
+}

@@ -1,0 +1,15 @@
+FlatOBj Foo{
+	bar: int
+	baz: Alpha
+}
+
+fob Alpha{
+	beta: str
+	delta: dbl
+}
+
+//
+
+fob Foo{
+	bar: Foo // Error, not flat
+}

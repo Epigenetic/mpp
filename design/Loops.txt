@@ -1,0 +1,81 @@
+ANSI M:
+
+n count,wroteAny
+f count=1:1:100 d
+	k wroteAny
+	i count#3=0 w "Fizz",s wroteAny=1
+	i count#5=0 w "Buzz",s wroteAny=1
+	i 'wroteAny w count
+	w !
+	
+MPP:
+
+n count:int
+f count=1:1:100 {
+	n wroteAny:bool=false
+	i count#3=0 w "Fizz",s wroteAny=true
+	i count#5=0 w "Buzz",s wroteAny=true
+	i 'wroteAny w count
+	w !
+}
+
+//
+
+f n count:int=1:1:100{
+	n wroteAny:bool=false
+	i count#3=0 w "Fizz",s wroteAny=true
+	i count#5=0 w "Buzz",s wroteAny=true
+	i 'wroteAny w count
+	w !
+}
+
+ANSI M:
+
+n key
+f  s key=$o(arr(key)) d q:key=""
+	w !,arr(key)
+	
+MPP:
+
+n key:str
+ForEach key in arr {
+	w !,arr(key)
+}
+
+//
+
+fe n key:str in arr {
+	w !,arr(key)
+}
+
+//
+
+fe n val:str of arr {
+	w !,val
+}
+
+ANSI M:
+
+n key,found
+f  s key=$o(arr(key)) d q:key=""!found
+	i arr(key)="foo" s found=1
+
+MPP:
+
+n key:str
+fe key in arr {
+	i arr(key)="foo" br
+}
+
+ANSI M:
+
+n foo,count
+f  d  q:foo>=100
+	s count=foo#5,foo=foo+1
+
+MPP:
+
+n foo:int,count:int
+wh foo < 100{
+	s count = foo # 5,foo = foo + 1
+}
