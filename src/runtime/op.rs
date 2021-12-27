@@ -6,6 +6,7 @@
 
 use crate::runtime::MVal;
 use std::convert::TryInto;
+use std::mem::transmute;
 
 #[repr(u8)]
 #[derive(Debug)]
@@ -42,37 +43,10 @@ pub enum Ops {
 
 impl Ops {
     pub fn from_u8(value: u8) -> Ops {
-        match value {
-            1 => Ops::Push,
-            2 => Ops::Add,
-            3 => Ops::Sub,
-            4 => Ops::Mult,
-            5 => Ops::Div,
-            6 => Ops::Mod,
-            7 => Ops::IntDiv,
-            8 => Ops::ToNum,
-            9 => Ops::ToNegNum,
-            10 => Ops::Exp,
-            11 => Ops::Write,
-            12 => Ops::WriteLine,
-            13 => Ops::WriteClearScreen,
-            14 => Ops::WriteToCol,
-            15 => Ops::LessThan,
-            16 => Ops::GreaterThan,
-            17 => Ops::LessThanOrEqualTo,
-            18 => Ops::GreaterThanOrEqualTo,
-            19 => Ops::Not,
-            20 => Ops::New,
-            21 => Ops::Set,
-            22 => Ops::Get,
-            23 => Ops::Equals,
-            24 => Ops::NotEquals,
-            25 => Ops::JumpIfFalse,
-            26 => Ops::Jump,
-            27 => Ops::JumpUp,
-            28 => Ops::Pop,
-            op => panic!("Unrecognized op code {}", op),
+        if value < 1 || value > 28 {
+            panic!("Unrecognized op code {}", value)
         }
+        return unsafe { transmute(value) };
     }
 }
 
