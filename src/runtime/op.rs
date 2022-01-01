@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
-use crate::runtime::MVal;
+use crate::runtime::{MVal, MValType};
 use std::convert::TryInto;
 
 #[repr(u8)]
@@ -84,8 +84,9 @@ pub fn print_program(program: &Vec<u8>) {
         match Ops::from_u8(program[index]) {
             Ops::Push => {
                 let (value, offset) = MVal::from_bytes(&program[index + 1..]);
-                println!("PUSH: {}", value);
-                index += offset + std::mem::size_of::<usize>() + 1;
+                println!("PUSH: {:?}", value);
+                println!("index: {}, offset: {}", index, offset);
+                index += offset + 1;
             }
             Ops::Add => {
                 println!("ADD");
@@ -160,8 +161,8 @@ pub fn print_program(program: &Vec<u8>) {
                 index += 1;
             }
             Ops::New => {
-                println!("NEW");
-                index += 1;
+                println!("NEW {:?}", MValType::from_u8(program[index + 1]));
+                index += 2;
             }
             Ops::Set => {
                 println!("SET {}", program[index + 1]);

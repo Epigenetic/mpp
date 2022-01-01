@@ -5,7 +5,7 @@
  */
 
 use crate::parser::parse_node::ParserNodeType::Identifier;
-use crate::runtime::{MVal, Ops};
+use crate::runtime::{MVal, MValType, Ops};
 use std::collections::HashMap;
 use std::fmt;
 
@@ -22,7 +22,11 @@ impl ParserNode<'_> {
         }
     }
 
-    pub fn to_bytes(&self, program: &mut Vec<u8>, variable_map: &mut HashMap<String, usize>) {
+    pub fn to_bytes(
+        &self,
+        program: &mut Vec<u8>,
+        variable_map: &mut HashMap<String, VariableDefinition>,
+    ) {
         match &self.node_type {
             ParserNodeType::Block(_) => {
                 // Lines
@@ -222,15 +226,24 @@ impl ParserNode<'_> {
                     if variable_map.contains_key(identifier) {
                         panic!("Variable already defined: {}.", identifier)
                     }
-                    variable_map.insert(identifier.to_string(), variable_map.len());
+
+                    program.push(Ops::New as u8);
+                    if let ParserNodeType::Type(type_val) = &self.children[1].node_type {
+                        variable_map.insert(
+                            identifier.to_string(),
+                            VariableDefinition {
+                                stack_position: variable_map.len(),
+                                val_type: type_val.to_mval_type(),
+                            },
+                        );
+                        self.children[1].to_bytes(program, variable_map)
+                    }
                 }
 
-                program.push(Ops::New as u8);
-
                 // Has an IdentifierListTail
-                if self.children.len() == 2 {
+                if self.children.len() == 3 {
                     // IdentifierListTail
-                    self.children[1].to_bytes(program, variable_map);
+                    self.children[2].to_bytes(program, variable_map);
                 }
             }
             ParserNodeType::IdentifierListTail => {
@@ -240,15 +253,24 @@ impl ParserNode<'_> {
                     if variable_map.contains_key(identifier) {
                         panic!("Variable already defined: {}.", identifier)
                     }
-                    variable_map.insert(identifier.to_string(), variable_map.len());
+                    program.push(Ops::New as u8);
+
+                    if let ParserNodeType::Type(type_val) = &self.children[1].node_type {
+                        variable_map.insert(
+                            identifier.to_string(),
+                            VariableDefinition {
+                                stack_position: variable_map.len(),
+                                val_type: type_val.to_mval_type(),
+                            },
+                        );
+                        self.children[1].to_bytes(program, variable_map)
+                    }
                 }
 
-                program.push(Ops::New as u8);
-
                 // Has an IdentifierListTail
-                if self.children.len() == 2 {
+                if self.children.len() == 3 {
                     // IdentifierListTail
-                    self.children[1].to_bytes(program, variable_map);
+                    self.children[2].to_bytes(program, variable_map);
                 }
             }
             ParserNodeType::SetStatement => {
@@ -509,15 +531,20 @@ impl ParserNode<'_> {
                 }
             }
             ParserNodeType::Identifier(identifier) => {
-                let var_position = variable_map.get(&identifier.to_string());
-                if var_position == None {
+                let var_definition = variable_map.get(&identifier.to_string());
+                if let None = var_definition {
                     panic!("Undefined variable {}.", identifier);
                 }
-                let position_bytes = var_position.unwrap().to_le_bytes();
+                let position_bytes = var_definition.unwrap().stack_position.to_le_bytes();
                 for byte in position_bytes {
                     program.push(byte);
                 }
             }
+            ParserNodeType::Type(type_obj) => program.push(match type_obj {
+                Type::String => MValType::String as u8,
+                Type::Int => MValType::Int as u8,
+                Type::Double => MValType::Double as u8,
+            }),
         }
     }
 
@@ -592,6 +619,7 @@ impl fmt::Display for ParserNode<'_> {
             ParserNodeType::StringLiteral(value) => write!(f, "StringLiteral: {}", value),
             ParserNodeType::NumericLiteral(value) => write!(f, "NumericLiteral: {}", value),
             ParserNodeType::Identifier(var_name) => write!(f, "Identifier: {}", var_name),
+            ParserNodeType::Type(type_name) => write!(f, "Type: {:?}", type_name),
         }
     }
 }
@@ -660,6 +688,7 @@ pub enum ParserNodeType<'a> {
     NumericLiteral(MVal),
     StringLiteral(MVal),
     Identifier(&'a str),
+    Type(Type),
 }
 
 #[derive(Debug, PartialEq)]
@@ -702,6 +731,28 @@ pub enum WriteFormat {
     NewLine,
     ClearScreen,
     ToCol,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Type {
+    String,
+    Double,
+    Int,
+}
+
+impl Type {
+    pub fn to_mval_type(&self) -> MValType {
+        match self {
+            Type::String => MValType::String,
+            Type::Int => MValType::Int,
+            Type::Double => MValType::Double,
+        }
+    }
+}
+
+pub struct VariableDefinition {
+    stack_position: usize,
+    val_type: MValType,
 }
 
 pub fn print_parse_tree(root: &ParserNode) {

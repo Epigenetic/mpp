@@ -5,7 +5,7 @@
  */
 
 use crate::lexer::print_tokenize_error;
-use crate::parser::print_parse_error;
+use crate::parser::{print_parse_error, VariableDefinition};
 use crate::runtime::print_program;
 use crate::runtime::vm::VM;
 use crate::Flags::{ExecutionOutput, File, LexerOutput, ParserOutput, PrintProgram, Test};
@@ -84,7 +84,7 @@ fn execute_line(input: String, flags: &Vec<Flags>) {
                             parser::print_parse_tree(&root);
                         }
                         let mut program: Vec<u8> = Vec::new();
-                        let mut variable_map = HashMap::<String, usize>::new();
+                        let mut variable_map = HashMap::<String, VariableDefinition>::new();
                         root.to_bytes(&mut program, &mut variable_map);
                         if flags.contains(&PrintProgram) {
                             println!("{:?}", program);
@@ -128,7 +128,7 @@ fn execute_file(input: String, flags: &Vec<Flags>) -> Result<(), Box<dyn Error>>
                             parser::print_parse_tree(&root);
                         }
                         let mut program: Vec<u8> = Vec::new();
-                        let mut variable_map = HashMap::<String, usize>::new();
+                        let mut variable_map = HashMap::<String, VariableDefinition>::new();
                         root.to_bytes(&mut program, &mut variable_map);
                         if flags.contains(&PrintProgram) {
                             println!("{:?}", program);

@@ -7,6 +7,7 @@
 use crate::runtime::BTree;
 use std::convert::TryInto;
 use std::fmt::{Debug, Formatter};
+use std::mem::ManuallyDrop;
 use std::ops::{Add, Div, Mul, Neg, Sub};
 use std::{fmt, str};
 
@@ -111,10 +112,17 @@ union MValValue {
 }
 
 impl MVal {
-    pub fn new() -> MVal {
+    pub fn new(mval_type: MValType) -> MVal {
         MVal {
-            value: None,
-            value_type: MValType::Null,
+            value: Some(match mval_type {
+                MValType::String => MValValue {
+                    string: ManuallyDrop::new("".to_string()),
+                },
+                MValType::Int => MValValue { int: 0 },
+                MValType::Double => MValValue { double: 0.0 },
+                _ => unreachable!("Cannot construct type {:?}", mval_type),
+            }),
+            value_type: mval_type,
         }
     }
 
@@ -148,39 +156,42 @@ impl MVal {
 
         match value {
             None => byte_vec.push(0 as u8),
-            Some(val) => match &self.value_type {
-                MValType::Null => {}
-                MValType::String => unsafe {
-                    let string_val = &val.string;
-                    let string_bytes = string_val.as_bytes();
-                    let string_len = string_bytes.len().to_le_bytes();
-                    for byte in string_len {
-                        byte_vec.push(byte);
-                    }
-                    for byte in string_val.as_bytes() {
-                        byte_vec.push(*byte)
-                    }
-                },
-                MValType::Double => unsafe {
-                    let double_val = &val.double;
-                    let double_bytes = double_val.to_le_bytes();
-                    for byte in double_bytes {
-                        byte_vec.push(byte)
-                    }
-                },
-                MValType::Int => unsafe {
-                    let int_val = &val.int;
-                    let int_bytes = int_val.to_le_bytes();
-                    for byte in int_bytes {
-                        byte_vec.push(byte)
-                    }
-                },
-                MValType::Boolean => unsafe {
-                    let bool_val = &val.boolean;
-                    let bool_byte = if *bool_val { 1u8 } else { 0u8 };
-                    byte_vec.push(bool_byte);
-                },
-            },
+            Some(val) => {
+                //byte_vec.push(self.value_type as u8);
+                match &self.value_type {
+                    MValType::Null => {}
+                    MValType::String => unsafe {
+                        let string_val = &val.string;
+                        let string_bytes = string_val.as_bytes();
+                        let string_len = string_bytes.len().to_le_bytes();
+                        for byte in string_len {
+                            byte_vec.push(byte);
+                        }
+                        for byte in string_val.as_bytes() {
+                            byte_vec.push(*byte)
+                        }
+                    },
+                    MValType::Double => unsafe {
+                        let double_val = &val.double;
+                        let double_bytes = double_val.to_le_bytes();
+                        for byte in double_bytes {
+                            byte_vec.push(byte)
+                        }
+                    },
+                    MValType::Int => unsafe {
+                        let int_val = &val.int;
+                        let int_bytes = int_val.to_le_bytes();
+                        for byte in int_bytes {
+                            byte_vec.push(byte)
+                        }
+                    },
+                    MValType::Boolean => unsafe {
+                        let bool_val = &val.boolean;
+                        let bool_byte = if *bool_val { 1u8 } else { 0u8 };
+                        byte_vec.push(bool_byte);
+                    },
+                }
+            }
         }
         byte_vec
     }
@@ -207,7 +218,7 @@ impl MVal {
                         }),
                         value_type: MValType::String,
                     },
-                    size + 1,
+                    std::mem::size_of::<usize>() + size + 1,
                 )
             }
             MValType::Double => {
@@ -269,6 +280,21 @@ impl MVal {
         }
     }
 
+    pub fn set_string_val(&mut self, value: String) {
+        if self.value_type != MValType::String {
+            panic!("MVal is not a string.")
+        }
+
+        let old_string = self.get_string_val();
+
+        self.value
+            .as_mut()
+            .expect("Strings should not be null")
+            .string = ManuallyDrop::new(value);
+
+        drop(old_string)
+    }
+
     pub fn get_double_val(&self) -> f64 {
         if self.value_type != MValType::Double {
             panic!("MVal is not a double.")
@@ -283,11 +309,30 @@ impl MVal {
         }
     }
 
+    pub fn set_double_val(&mut self, value: f64) {
+        if self.value_type != MValType::Double {
+            panic!("MVal is not a string.")
+        }
+
+        self.value
+            .as_mut()
+            .expect("Strings should not be null")
+            .double = value;
+    }
+
     pub fn get_int_val(&self) -> i32 {
         if self.value_type != MValType::Int {
             panic!("MVal is not an int.");
         }
         unsafe { return self.value.as_ref().expect("Ints should not be null").int }
+    }
+
+    pub fn set_int_val(&mut self, value: i32) {
+        if self.value_type != MValType::Int {
+            panic!("MVal is not a string.")
+        }
+
+        self.value.as_mut().expect("Strings should not be null").int = value;
     }
 
     pub fn get_boolean_val(&self) -> bool {
@@ -302,6 +347,17 @@ impl MVal {
                 .expect("Booleans should not be null")
                 .boolean;
         }
+    }
+
+    pub fn set_boolean_val(&mut self, value: bool) {
+        if self.value_type != MValType::Boolean {
+            panic!("MVal is not a string.")
+        }
+
+        self.value
+            .as_mut()
+            .expect("Strings should not be null")
+            .boolean = value;
     }
 
     #[inline]
@@ -645,7 +701,7 @@ impl Add for &MVal {
     fn add(self, rhs: Self) -> Self::Output {
         self.verify_operands_numeric(rhs);
 
-        return if self.value_type == MValType::Int && rhs.value_type == MValType::Double {
+        return if self.value_type == MValType::Int && rhs.value_type == MValType::Int {
             MVal {
                 value: Some(MValValue {
                     int: self.get_int_val() + rhs.get_int_val(),
@@ -687,7 +743,7 @@ impl Sub for &MVal {
     fn sub(self, rhs: Self) -> Self::Output {
         self.verify_operands_numeric(rhs);
 
-        return if self.value_type == MValType::Int && rhs.value_type == MValType::Double {
+        return if self.value_type == MValType::Int && rhs.value_type == MValType::Int {
             MVal {
                 value: Some(MValValue {
                     int: self.get_int_val() - rhs.get_int_val(),
@@ -729,7 +785,7 @@ impl Mul for &MVal {
     fn mul(self, rhs: Self) -> Self::Output {
         self.verify_operands_numeric(rhs);
 
-        return if self.value_type == MValType::Int && rhs.value_type == MValType::Double {
+        return if self.value_type == MValType::Int && rhs.value_type == MValType::Int {
             MVal {
                 value: Some(MValValue {
                     int: self.get_int_val() * rhs.get_int_val(),
@@ -772,37 +828,28 @@ impl Div for &MVal {
     fn div(self, rhs: Self) -> Self::Output {
         self.verify_operands_numeric(rhs);
 
-        return if self.value_type == MValType::Int && rhs.value_type == MValType::Double {
+        let lhs_double = if self.value_type == MValType::Int {
+            self.get_int_val() as f64
+        } else {
+            self.get_double_val()
+        };
+
+        let rhs_double = if rhs.value_type == MValType::Int {
+            rhs.get_int_val() as f64
+        } else {
+            rhs.get_double_val()
+        };
+
+        let result = lhs_double / rhs_double;
+        return if result.fract() == 0.0 {
             MVal {
-                value: Some(MValValue {
-                    int: self.get_int_val() / rhs.get_int_val(),
-                }),
+                value: Some(MValValue { int: result as i32 }),
                 value_type: MValType::Int,
             }
         } else {
-            let lhs_double = if self.value_type == MValType::Int {
-                self.get_int_val() as f64
-            } else {
-                self.get_double_val()
-            };
-
-            let rhs_double = if rhs.value_type == MValType::Int {
-                rhs.get_int_val() as f64
-            } else {
-                rhs.get_double_val()
-            };
-
-            let result = lhs_double / rhs_double;
-            if result.fract() == 0.0 {
-                MVal {
-                    value: Some(MValValue { int: result as i32 }),
-                    value_type: MValType::Int,
-                }
-            } else {
-                MVal {
-                    value: Some(MValValue { double: result }),
-                    value_type: MValType::Double,
-                }
+            MVal {
+                value: Some(MValValue { double: result }),
+                value_type: MValType::Double,
             }
         };
     }

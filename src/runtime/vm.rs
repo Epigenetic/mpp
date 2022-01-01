@@ -77,7 +77,7 @@ impl VM {
         self.program_counter += 1;
         let (operand, operand_size) = MVal::from_bytes(&self.program[self.program_counter..]);
         self.stack.push(Rc::new(operand));
-        self.program_counter += operand_size + std::mem::size_of::<usize>();
+        self.program_counter += operand_size;
     }
 
     fn execute_add(&mut self) {
@@ -146,9 +146,16 @@ impl VM {
     fn execute_to_negative_number(&mut self) {
         let operand = self.stack.pop().expect("No operand for to negative number");
 
-        self.stack.push(Rc::new(MVal::from_string_no_sanitize(
-            (-&*operand).to_string(),
-        )));
+        let mut new_val = MVal::new(operand.value_type);
+        if new_val.value_type == MValType::Int {
+            new_val.set_int_val(-operand.get_int_val());
+        } else if new_val.value_type == MValType::Double {
+            new_val.set_double_val(-operand.get_double_val());
+        } else {
+            panic!("Non numeric operand to to_negative_number")
+        }
+
+        self.stack.push(Rc::new(new_val));
         self.program_counter += 1;
     }
 
@@ -242,8 +249,11 @@ impl VM {
     }
 
     fn execute_new(&mut self) {
-        self.stack.push(Rc::new(MVal::new()));
-        self.program_counter += 1
+        let type_byte = &self.program[self.program_counter + 1];
+        let mval_type = MValType::from_u8(*type_byte);
+
+        self.stack.push(Rc::new(MVal::new(mval_type)));
+        self.program_counter += 2
     }
 
     fn execute_set(&mut self) {
@@ -251,6 +261,11 @@ impl VM {
             [self.program_counter + 1..self.program_counter + 1 + std::mem::size_of::<usize>()];
         let var_position = usize::from_le_bytes(pos_bytes.try_into().unwrap());
         let set_to = self.stack.pop().expect("No value to set variable to");
+
+        if self.stack[var_position].value_type != set_to.value_type {
+            panic!("Cannot set values of different types")
+        }
+
         self.stack[var_position] = set_to;
         self.program_counter += 1 + std::mem::size_of::<usize>();
     }

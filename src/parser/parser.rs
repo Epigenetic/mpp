@@ -5,9 +5,11 @@
  */
 
 use crate::lexer::{ReservedToken, Token, TokenType};
-use crate::parser::parse_node::{AddOp, EqOp, MulOp, ParserNode, RelOp, UnaryOp, WriteFormat};
+use crate::parser::parse_node::{
+    AddOp, EqOp, MulOp, ParserNode, RelOp, Type, UnaryOp, WriteFormat,
+};
 use crate::parser::ParserNodeType;
-use crate::runtime::MVal;
+use crate::runtime::{MVal, MValType};
 
 pub struct Parser<'a> {
     tokens: Vec<Token<'a>>,
@@ -544,13 +546,44 @@ fn parse_identifier_list<'a>(
 
     let identifier_node = ParserNode::new(Vec::new(), ParserNodeType::Identifier(tokens[0].value));
 
+    expect(&tokens[1..], TokenType::Colon)?;
+
+    if tokens.len() < 2 {
+        return Err(ParseError {
+            remaining_tokens: &tokens[2..],
+            message: "Expecting type".to_string(),
+        });
+    }
+
+    let identifier_type_node = match &tokens[2].token_type {
+        TokenType::Reserved(ReservedToken::String) => {
+            ParserNode::new(Vec::new(), ParserNodeType::Type(Type::String))
+        }
+        TokenType::Reserved(ReservedToken::Int) => {
+            ParserNode::new(Vec::new(), ParserNodeType::Type(Type::Int))
+        }
+        TokenType::Reserved(ReservedToken::Double) => {
+            ParserNode::new(Vec::new(), ParserNodeType::Type(Type::Double))
+        }
+        _ => {
+            return Err(ParseError {
+                remaining_tokens: &tokens[2..],
+                message: "Expecting type".to_string(),
+            })
+        }
+    };
+
     let (identifier_list_tail, identifier_list_tail_rest) =
-        parse_identifier_list_tail(&tokens[1..])?;
+        parse_identifier_list_tail(&tokens[3..])?;
 
     if let Some(identifier_list_tail_node) = identifier_list_tail {
         Ok((
             Some(ParserNode::new(
-                vec![identifier_node, identifier_list_tail_node],
+                vec![
+                    identifier_node,
+                    identifier_type_node,
+                    identifier_list_tail_node,
+                ],
                 ParserNodeType::IdentifierList,
             )),
             identifier_list_tail_rest,
@@ -558,10 +591,10 @@ fn parse_identifier_list<'a>(
     } else {
         Ok((
             Some(ParserNode::new(
-                vec![identifier_node],
+                vec![identifier_node, identifier_type_node],
                 ParserNodeType::IdentifierList,
             )),
-            &tokens[1..],
+            &tokens[3..],
         ))
     }
 }
@@ -581,13 +614,45 @@ fn parse_identifier_list_tail<'a>(
 
             let identifier_node =
                 ParserNode::new(Vec::new(), ParserNodeType::Identifier(tokens[1].value));
+
+            expect(&tokens[2..], TokenType::Colon)?;
+
+            if tokens.len() < 3 {
+                return Err(ParseError {
+                    remaining_tokens: &tokens[2..],
+                    message: "Expecting type".to_string(),
+                });
+            }
+
+            let identifier_type_node = match &tokens[3].token_type {
+                TokenType::Reserved(ReservedToken::String) => {
+                    ParserNode::new(Vec::new(), ParserNodeType::Type(Type::String))
+                }
+                TokenType::Reserved(ReservedToken::Int) => {
+                    ParserNode::new(Vec::new(), ParserNodeType::Type(Type::Int))
+                }
+                TokenType::Reserved(ReservedToken::Double) => {
+                    ParserNode::new(Vec::new(), ParserNodeType::Type(Type::Double))
+                }
+                _ => {
+                    return Err(ParseError {
+                        remaining_tokens: &tokens[2..],
+                        message: "Expecting type".to_string(),
+                    })
+                }
+            };
+
             let (identifier_list_tail, identifier_list_tail_rest) =
-                parse_identifier_list_tail(&tokens[2..])?;
+                parse_identifier_list_tail(&tokens[4..])?;
 
             if let Some(identifier_list_tail_node) = identifier_list_tail {
                 Ok((
                     Some(ParserNode::new(
-                        vec![identifier_node, identifier_list_tail_node],
+                        vec![
+                            identifier_node,
+                            identifier_type_node,
+                            identifier_list_tail_node,
+                        ],
                         ParserNodeType::IdentifierListTail,
                     )),
                     identifier_list_tail_rest,
@@ -595,10 +660,10 @@ fn parse_identifier_list_tail<'a>(
             } else {
                 Ok((
                     Some(ParserNode::new(
-                        vec![identifier_node],
+                        vec![identifier_node, identifier_type_node],
                         ParserNodeType::IdentifierListTail,
                     )),
-                    &tokens[2..],
+                    &tokens[4..],
                 ))
             }
         }
@@ -1575,10 +1640,19 @@ fn parse_factor<'a>(
         // NumericLiteral
         TokenType::NumLit => {
             let value = tokens[0].value;
-            let numeric_literal = ParserNode::new(
-                Vec::new(),
-                ParserNodeType::NumericLiteral(MVal::from_string_no_sanitize(value.to_string())),
-            );
+            let double_val = value.parse::<f64>().unwrap();
+            let numeric_literal = if double_val.fract() == 0.0 {
+                let mut mval = MVal::new(MValType::Int);
+                mval.set_int_val(double_val as i32);
+
+                ParserNode::new(Vec::new(), ParserNodeType::NumericLiteral(mval))
+            } else {
+                let mut mval = MVal::new(MValType::Double);
+                mval.set_double_val(double_val);
+
+                ParserNode::new(Vec::new(), ParserNodeType::NumericLiteral(mval))
+            };
+
             return Ok((
                 Some(ParserNode::new(
                     vec![numeric_literal],
