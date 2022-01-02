@@ -1,23 +1,19 @@
 ;; Test Less Than
-w 1<1 ; 0
-w 1<2 ; 1
-w 2<1 ; 0
+w 1<1 ; false
+w 1<2 ; true
+w 2<1 ; false
 
 ;; Test Greater Than
-w 1>1 ; 0
-w 1>2 ; 0
-w 2>1 ; 1
+w 1>1 ; false
+w 1>2 ; false
+w 2>1 ; true
 
 ;; Test Less Than or Equal To
-w 1<=1 ; 1
-w 1<=2 ; 1
-w 2<=1 ; 0
+w 1<=1 ; true
+w 1<=2 ; true
+w 2<=1 ; false
 
 ;; Test Greater Than or Equal To
-w 1>=1 ; 1
-w 1>=2 ; 0
-w 2>=1 ; 1
-
-;; Test Chaining
-w 3>2>1 ; 0
-w 3>2>=1 ; 1
+w 1>=1 ; true
+w 1>=2 ; false
+w 2>=1 ; true
