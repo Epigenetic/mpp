@@ -103,7 +103,7 @@ fn execute_error_test(test: &str, expected: String) {
 }
 
 #[test]
-fn foo() {
+fn if_tests() {
     run_directory_tests(Path::new("tests/if_tests/passing"));
 }
 

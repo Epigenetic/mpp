@@ -1,10 +1,10 @@
 ;; Test Variables Start Uninitialized
 ;; TODO When we have $d that will be a much better way of checking that this is true
-n foo w 1,foo,1 ; 11
+n foo:string w 1,foo,1 ; 11
 
 ;; Test Setting Variables
-n foo s foo="huzzah!" w foo ; huzzah!
+n foo:string s foo="huzzah!" w foo ; huzzah!
 
 ;; Test Using Variables in Expression
-n foo s foo=1 w foo+3 ; 4
-n foo,bar s foo=1,bar=foo+2 w bar ; 3
+n foo:int s foo=1 w foo+3 ; 4
+n foo:int,bar:int s foo=1,bar=foo+2 w bar ; 3

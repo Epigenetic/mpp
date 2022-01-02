@@ -15,11 +15,6 @@ fn test_arithmetic() {
 }
 
 #[test]
-fn test_numeric_interpretation() {
-    run_tests("tests/expression_tests/numeric_interpretation.mtest")
-}
-
-#[test]
 fn test_order_of_operations() {
     run_tests("tests/expression_tests/order_of_operations.mtest")
 }

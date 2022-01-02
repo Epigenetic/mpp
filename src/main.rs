@@ -5,7 +5,8 @@
  */
 
 use crate::lexer::print_tokenize_error;
-use crate::parser::print_parse_error;
+use crate::parser::{print_parse_error, VariableDefinition};
+use crate::passes::check_types;
 use crate::runtime::print_program;
 use crate::runtime::vm::VM;
 use crate::Flags::{ExecutionOutput, File, LexerOutput, ParserOutput, PrintProgram, Test};
@@ -15,6 +16,7 @@ use std::{env, io};
 
 mod lexer;
 mod parser;
+mod passes;
 mod runtime;
 
 fn main() {
@@ -79,16 +81,27 @@ fn execute_line(input: String, flags: &Vec<Flags>) {
                 Err(error) => print_parse_error(input_copy, error),
                 Ok(parse_tree) => match parse_tree {
                     None => (),
-                    Some(root) => {
+                    Some(mut root) => {
                         if flags.contains(&ParserOutput) {
                             parser::print_parse_tree(&root);
                         }
+
+                        //TODO: Split out variable identification from the byte-code generation
+                        //      so we can check types before actually compiling
                         let mut program: Vec<u8> = Vec::new();
-                        let mut variable_map = HashMap::<String, usize>::new();
+                        let mut variable_map = HashMap::<String, VariableDefinition>::new();
                         root.to_bytes(&mut program, &mut variable_map);
                         if flags.contains(&PrintProgram) {
                             println!("{:?}", program);
                             print_program(&program);
+                        }
+
+                        match check_types(&mut root, &variable_map) {
+                            Ok(_) => {}
+                            Err(error) => {
+                                println!("{}", error.message);
+                                return;
+                            }
                         }
 
                         let mut vm = VM::new(program, flags.contains(&ExecutionOutput));
@@ -128,7 +141,7 @@ fn execute_file(input: String, flags: &Vec<Flags>) -> Result<(), Box<dyn Error>>
                             parser::print_parse_tree(&root);
                         }
                         let mut program: Vec<u8> = Vec::new();
-                        let mut variable_map = HashMap::<String, usize>::new();
+                        let mut variable_map = HashMap::<String, VariableDefinition>::new();
                         root.to_bytes(&mut program, &mut variable_map);
                         if flags.contains(&PrintProgram) {
                             println!("{:?}", program);

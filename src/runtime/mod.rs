@@ -11,6 +11,7 @@ pub mod vm;
 
 pub use btree::BTree;
 pub use mval::MVal;
+pub use mval::MValType;
 pub use op::print_program;
 pub use op::Ops;
 pub use vm::VM;

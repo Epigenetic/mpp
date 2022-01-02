@@ -1,4 +1,4 @@
-n foo
+n foo:int
 s foo = 0
-i foo w "true"
-i 'foo w "false"
+i foo>0 w "true"
+i foo<=0 w "false"
