@@ -10,8 +10,9 @@ use std::collections::HashMap;
 use std::fmt;
 
 pub struct ParserNode<'a> {
-    children: Vec<ParserNode<'a>>,
-    node_type: ParserNodeType<'a>,
+    pub children: Vec<ParserNode<'a>>,
+    pub node_type: ParserNodeType<'a>,
+    pub value_type: Option<MValType>,
 }
 
 impl ParserNode<'_> {
@@ -19,6 +20,7 @@ impl ParserNode<'_> {
         ParserNode {
             children,
             node_type,
+            value_type: None,
         }
     }
 
@@ -752,7 +754,7 @@ impl Type {
 
 pub struct VariableDefinition {
     stack_position: usize,
-    val_type: MValType,
+    pub val_type: MValType,
 }
 
 pub fn print_parse_tree(root: &ParserNode) {
