@@ -1,4 +1,4 @@
-n foo:int
+n foo
 s foo = 5
 i foo < 5 w "Less",!
 e i foo = 5 w "Equals",!

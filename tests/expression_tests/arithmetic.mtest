@@ -5,7 +5,7 @@ w 1+2 ; 3
 w 1-2 ; -1
 
 ;; Test Division
-w 1/2 ; 0.5
+w 1/2 ; .5
 
 ;; Test Integer Division
 w 1\2 ; 0
