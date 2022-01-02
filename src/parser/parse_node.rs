@@ -314,9 +314,6 @@ impl ParserNode<'_> {
             }
             ParserNodeType::FormatExpressionTail => {
                 // RelationalExpression
-                self.children[1].to_bytes(program, variable_map);
-
-                // RelOp
                 self.children[0].to_bytes(program, variable_map);
             }
             ParserNodeType::HashBangFormat => {

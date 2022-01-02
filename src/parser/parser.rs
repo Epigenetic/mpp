@@ -951,7 +951,19 @@ fn parse_format_expression<'a>(
             ))
         }
     } else {
-        Ok((None, tokens))
+        let (format_expression_tail, format_expression_tail_rest) =
+            parse_format_expression_tail(hash_bang_format_rest)?;
+        if let Some(format_expression_tail_node) = format_expression_tail {
+            Ok((
+                Some(ParserNode::new(
+                    vec![format_expression_tail_node],
+                    ParserNodeType::FormatExpression,
+                )),
+                format_expression_tail_rest,
+            ))
+        } else {
+            Ok((None, tokens))
+        }
     }
 }
 
