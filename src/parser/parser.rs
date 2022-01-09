@@ -362,7 +362,7 @@ fn parse_for_statement<'a>(
                         })
                     }
                 } else {
-                    unreachable!("ForBoundList cannot go to epsilon")
+                    unreachable!("ForBound cannot go to epsilon")
                 }
             }
         }
