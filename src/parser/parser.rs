@@ -87,6 +87,7 @@ fn parse_block<'a>(
             Some(ParserNode::new(
                 vec![lines_node],
                 ParserNodeType::Block(None),
+                None,
             )),
             lines_rest,
         ))
@@ -113,12 +114,17 @@ fn parse_lines<'a>(
                 Some(ParserNode::new(
                     vec![line_node, lines_node],
                     ParserNodeType::Lines,
+                    None,
                 )),
                 lines_rest,
             ))
         } else {
             Ok((
-                Some(ParserNode::new(vec![line_node], ParserNodeType::Lines)),
+                Some(ParserNode::new(
+                    vec![line_node],
+                    ParserNodeType::Lines,
+                    None,
+                )),
                 line_rest,
             ))
         }
@@ -143,6 +149,7 @@ fn parse_line<'a>(
                 Some(ParserNode::new(
                     vec![statement_node, statements_node],
                     ParserNodeType::Line,
+                    None,
                 )),
                 &statements_rest[1..],
             ))
@@ -150,7 +157,11 @@ fn parse_line<'a>(
             expect(statements_rest, TokenType::NewLine)?;
 
             Ok((
-                Some(ParserNode::new(vec![statement_node], ParserNodeType::Line)),
+                Some(ParserNode::new(
+                    vec![statement_node],
+                    ParserNodeType::Line,
+                    None,
+                )),
                 &statement_rest[1..],
             ))
         }
@@ -158,7 +169,7 @@ fn parse_line<'a>(
         expect(statement_rest, TokenType::NewLine)?;
 
         Ok((
-            Some(ParserNode::new(Vec::new(), ParserNodeType::Line)),
+            Some(ParserNode::new(Vec::new(), ParserNodeType::Line, None)),
             &tokens[1..],
         ))
     };
@@ -178,6 +189,7 @@ fn parse_statements<'a>(
                 Some(ParserNode::new(
                     vec![statement_node, statements_node],
                     ParserNodeType::Statements,
+                    None,
                 )),
                 statements_rest,
             ))
@@ -186,6 +198,7 @@ fn parse_statements<'a>(
                 Some(ParserNode::new(
                     vec![statement_node],
                     ParserNodeType::Statements,
+                    None,
                 )),
                 statement_rest,
             ))
@@ -212,6 +225,7 @@ fn parse_statement<'a>(
                     Some(ParserNode::new(
                         vec![new_statement_node],
                         ParserNodeType::Statement,
+                        None,
                     )),
                     new_statement_rest,
                 ))
@@ -227,6 +241,7 @@ fn parse_statement<'a>(
                     Some(ParserNode::new(
                         vec![set_statement_node],
                         ParserNodeType::Statement,
+                        None,
                     )),
                     set_statement_rest,
                 ))
@@ -242,6 +257,7 @@ fn parse_statement<'a>(
                     Some(ParserNode::new(
                         vec![write_statement_node],
                         ParserNodeType::Statement,
+                        None,
                     )),
                     write_statement_rest,
                 ))
@@ -257,6 +273,7 @@ fn parse_statement<'a>(
                     Some(ParserNode::new(
                         vec![if_statement_node],
                         ParserNodeType::Statement,
+                        None,
                     )),
                     if_statement_rest,
                 ))
@@ -272,6 +289,7 @@ fn parse_statement<'a>(
                     Some(ParserNode::new(
                         vec![for_statement_node],
                         ParserNodeType::Statement,
+                        None,
                     )),
                     for_statement_rest,
                 ))
@@ -301,6 +319,7 @@ fn parse_for_statement<'a>(
                         Some(ParserNode::new(
                             vec![statements_node],
                             ParserNodeType::ForStatement,
+                            Some(&tokens[0]),
                         )),
                         statements_rest,
                     ))
@@ -316,8 +335,11 @@ fn parse_for_statement<'a>(
                     message: "Expected equals".to_string(),
                 })
             } else {
-                let identifier_node =
-                    ParserNode::new(Vec::new(), ParserNodeType::Identifier(&tokens[1].value));
+                let identifier_node = ParserNode::new(
+                    Vec::new(),
+                    ParserNodeType::Identifier(&tokens[1].value),
+                    Some(&tokens[1]),
+                );
 
                 let (for_bound, for_bound_rest) = parse_for_bound(&tokens[3..], identifier_node)?;
 
@@ -329,6 +351,7 @@ fn parse_for_statement<'a>(
                             Some(ParserNode::new(
                                 vec![for_bound_node, statements_node],
                                 ParserNodeType::ForStatement,
+                                Some(&tokens[0]),
                             )),
                             statements_rest,
                         ))
@@ -366,6 +389,7 @@ fn parse_for_bound<'a>(
                 Some(ParserNode::new(
                     vec![identifier_node, start_expression_node],
                     ParserNodeType::ForBound,
+                    None,
                 )),
                 start_expression_rest,
             ))
@@ -385,6 +409,7 @@ fn parse_for_bound<'a>(
                                 increment_expression_node,
                             ],
                             ParserNodeType::ForBound,
+                            None,
                         )),
                         &increment_expression_rest[0..],
                     ))
@@ -402,6 +427,7 @@ fn parse_for_bound<'a>(
                                     bound_expression_node,
                                 ],
                                 ParserNodeType::ForBound,
+                                None,
                             )),
                             bound_expression_rest,
                         ))
@@ -457,6 +483,7 @@ fn parse_if_statement<'a>(
                                     else_statement_node,
                                 ],
                                 ParserNodeType::IfStatement,
+                                Some(&tokens[0]),
                             )),
                             else_statement_rest,
                         ))
@@ -465,6 +492,7 @@ fn parse_if_statement<'a>(
                             Some(ParserNode::new(
                                 vec![equality_expression_node, statements_node],
                                 ParserNodeType::IfStatement,
+                                Some(&tokens[0]),
                             )),
                             statements_rest,
                         ))
@@ -503,6 +531,7 @@ fn parse_else_statement<'a>(
                     Some(ParserNode::new(
                         vec![statements_node],
                         ParserNodeType::ElseStatement,
+                        Some(&tokens[0]),
                     )),
                     statements_rest,
                 ))
@@ -530,6 +559,7 @@ fn parse_new_statement<'a>(
             Some(ParserNode::new(
                 vec![identifier_list_node],
                 ParserNodeType::NewStatement,
+                Some(&tokens[0]),
             )),
             identifier_list_rest,
         ))
@@ -544,7 +574,11 @@ fn parse_identifier_list<'a>(
 ) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
     expect(tokens, TokenType::Identifier)?;
 
-    let identifier_node = ParserNode::new(Vec::new(), ParserNodeType::Identifier(tokens[0].value));
+    let identifier_node = ParserNode::new(
+        Vec::new(),
+        ParserNodeType::Identifier(tokens[0].value),
+        Some(&tokens[0]),
+    );
 
     expect(&tokens[1..], TokenType::Colon)?;
 
@@ -556,15 +590,21 @@ fn parse_identifier_list<'a>(
     }
 
     let identifier_type_node = match &tokens[2].token_type {
-        TokenType::Reserved(ReservedToken::String) => {
-            ParserNode::new(Vec::new(), ParserNodeType::Type(Type::String))
-        }
-        TokenType::Reserved(ReservedToken::Int) => {
-            ParserNode::new(Vec::new(), ParserNodeType::Type(Type::Int))
-        }
-        TokenType::Reserved(ReservedToken::Double) => {
-            ParserNode::new(Vec::new(), ParserNodeType::Type(Type::Double))
-        }
+        TokenType::Reserved(ReservedToken::String) => ParserNode::new(
+            Vec::new(),
+            ParserNodeType::Type(Type::String),
+            Some(&tokens[2]),
+        ),
+        TokenType::Reserved(ReservedToken::Int) => ParserNode::new(
+            Vec::new(),
+            ParserNodeType::Type(Type::Int),
+            Some(&tokens[2]),
+        ),
+        TokenType::Reserved(ReservedToken::Double) => ParserNode::new(
+            Vec::new(),
+            ParserNodeType::Type(Type::Double),
+            Some(&tokens[2]),
+        ),
         _ => {
             return Err(ParseError {
                 remaining_tokens: &tokens[2..],
@@ -585,6 +625,7 @@ fn parse_identifier_list<'a>(
                     identifier_list_tail_node,
                 ],
                 ParserNodeType::IdentifierList,
+                None,
             )),
             identifier_list_tail_rest,
         ))
@@ -593,6 +634,7 @@ fn parse_identifier_list<'a>(
             Some(ParserNode::new(
                 vec![identifier_node, identifier_type_node],
                 ParserNodeType::IdentifierList,
+                None,
             )),
             &tokens[3..],
         ))
@@ -612,8 +654,11 @@ fn parse_identifier_list_tail<'a>(
         TokenType::Comma => {
             expect(&tokens[1..], TokenType::Identifier)?;
 
-            let identifier_node =
-                ParserNode::new(Vec::new(), ParserNodeType::Identifier(tokens[1].value));
+            let identifier_node = ParserNode::new(
+                Vec::new(),
+                ParserNodeType::Identifier(tokens[1].value),
+                Some(&tokens[1]),
+            );
 
             expect(&tokens[2..], TokenType::Colon)?;
 
@@ -625,15 +670,21 @@ fn parse_identifier_list_tail<'a>(
             }
 
             let identifier_type_node = match &tokens[3].token_type {
-                TokenType::Reserved(ReservedToken::String) => {
-                    ParserNode::new(Vec::new(), ParserNodeType::Type(Type::String))
-                }
-                TokenType::Reserved(ReservedToken::Int) => {
-                    ParserNode::new(Vec::new(), ParserNodeType::Type(Type::Int))
-                }
-                TokenType::Reserved(ReservedToken::Double) => {
-                    ParserNode::new(Vec::new(), ParserNodeType::Type(Type::Double))
-                }
+                TokenType::Reserved(ReservedToken::String) => ParserNode::new(
+                    Vec::new(),
+                    ParserNodeType::Type(Type::String),
+                    Some(&tokens[3]),
+                ),
+                TokenType::Reserved(ReservedToken::Int) => ParserNode::new(
+                    Vec::new(),
+                    ParserNodeType::Type(Type::Int),
+                    Some(&tokens[3]),
+                ),
+                TokenType::Reserved(ReservedToken::Double) => ParserNode::new(
+                    Vec::new(),
+                    ParserNodeType::Type(Type::Double),
+                    Some(&tokens[3]),
+                ),
                 _ => {
                     return Err(ParseError {
                         remaining_tokens: &tokens[2..],
@@ -654,6 +705,7 @@ fn parse_identifier_list_tail<'a>(
                             identifier_list_tail_node,
                         ],
                         ParserNodeType::IdentifierListTail,
+                        None,
                     )),
                     identifier_list_tail_rest,
                 ))
@@ -662,6 +714,7 @@ fn parse_identifier_list_tail<'a>(
                     Some(ParserNode::new(
                         vec![identifier_node, identifier_type_node],
                         ParserNodeType::IdentifierListTail,
+                        None,
                     )),
                     &tokens[4..],
                 ))
@@ -684,6 +737,7 @@ fn parse_set_statement<'a>(
             Some(ParserNode::new(
                 vec![assignment_list_node],
                 ParserNodeType::SetStatement,
+                None,
             )),
             assignment_list_rest,
         ))
@@ -707,6 +761,7 @@ fn parse_assignment_list<'a>(
                 Some(ParserNode::new(
                     vec![assignment_statement_node, set_list_tail_node],
                     ParserNodeType::AssignmentList,
+                    None,
                 )),
                 assignment_list_tail_rest,
             ))
@@ -715,6 +770,7 @@ fn parse_assignment_list<'a>(
                 Some(ParserNode::new(
                     vec![assignment_statement_node],
                     ParserNodeType::AssignmentList,
+                    None,
                 )),
                 assignment_statement_rest,
             ))
@@ -746,6 +802,7 @@ fn parse_assignment_list_tail<'a>(
                         Some(ParserNode::new(
                             vec![assignment_statement_node, assignment_list_tail_node],
                             ParserNodeType::AssignmentListTail,
+                            None,
                         )),
                         assignment_list_tail_rest,
                     ))
@@ -754,6 +811,7 @@ fn parse_assignment_list_tail<'a>(
                         Some(ParserNode::new(
                             vec![assignment_statement_node],
                             ParserNodeType::AssignmentListTail,
+                            None,
                         )),
                         assignment_statement_rest,
                     ))
@@ -776,8 +834,11 @@ fn parse_assignment_statement<'a>(
 
     return match &tokens[0].token_type {
         TokenType::Identifier => {
-            let identifier_node =
-                ParserNode::new(Vec::new(), ParserNodeType::Identifier(tokens[0].value));
+            let identifier_node = ParserNode::new(
+                Vec::new(),
+                ParserNodeType::Identifier(tokens[0].value),
+                Some(&tokens[0]),
+            );
 
             expect(&tokens[1..], TokenType::Equals)?;
             let (equality_expression, equality_expression_rest) =
@@ -788,6 +849,7 @@ fn parse_assignment_statement<'a>(
                     Some(ParserNode::new(
                         vec![identifier_node, equality_expression_node],
                         ParserNodeType::AssignmentStatement,
+                        None,
                     )),
                     equality_expression_rest,
                 ))
@@ -813,6 +875,7 @@ fn parse_write_statement<'a>(
             Some(ParserNode::new(
                 vec![write_expression_list_node],
                 ParserNodeType::WriteStatement,
+                Some(&tokens[0]),
             )),
             write_expression_list_rest,
         ))
@@ -836,6 +899,7 @@ fn parse_write_expression_list<'a>(
                 Some(ParserNode::new(
                     vec![expression_node, write_expression_list_tail_node],
                     ParserNodeType::WriteExpressionList,
+                    None,
                 )),
                 write_expression_list_tail_rest,
             ))
@@ -844,6 +908,7 @@ fn parse_write_expression_list<'a>(
                 Some(ParserNode::new(
                     vec![expression_node],
                     ParserNodeType::WriteExpressionList,
+                    None,
                 )),
                 expression_rest,
             ))
@@ -877,6 +942,7 @@ fn parse_write_expr_list_tail<'a>(
                         Some(ParserNode::new(
                             vec![write_expression_node, expr_list_tail_node],
                             ParserNodeType::WriteExpressionListTail,
+                            None,
                         )),
                         expr_list_tail_rest,
                     ))
@@ -885,6 +951,7 @@ fn parse_write_expr_list_tail<'a>(
                         Some(ParserNode::new(
                             vec![write_expression_node],
                             ParserNodeType::WriteExpressionListTail,
+                            None,
                         )),
                         write_expression_rest,
                     ))
@@ -917,6 +984,7 @@ fn parse_write_expression<'a>(
                     Some(ParserNode::new(
                         vec![format_expression_node],
                         ParserNodeType::WriteExpression,
+                        None,
                     )),
                     format_expression_rest,
                 ))
@@ -933,6 +1001,7 @@ fn parse_write_expression<'a>(
                     Some(ParserNode::new(
                         vec![equality_expression_node],
                         ParserNodeType::WriteExpression,
+                        None,
                     )),
                     equality_expression_tail,
                 ))
@@ -958,6 +1027,7 @@ fn parse_format_expression<'a>(
                 Some(ParserNode::new(
                     vec![hash_bang_format_node, format_expression_tail_node],
                     ParserNodeType::FormatExpression,
+                    None,
                 )),
                 format_expression_tail_rest,
             ))
@@ -966,6 +1036,7 @@ fn parse_format_expression<'a>(
                 Some(ParserNode::new(
                     vec![hash_bang_format_node],
                     ParserNodeType::FormatExpression,
+                    None,
                 )),
                 hash_bang_format_rest,
             ))
@@ -978,6 +1049,7 @@ fn parse_format_expression<'a>(
                 Some(ParserNode::new(
                     vec![format_expression_tail_node],
                     ParserNodeType::FormatExpression,
+                    None,
                 )),
                 format_expression_tail_rest,
             ))
@@ -998,6 +1070,7 @@ fn parse_hash_bang_format<'a>(tokens: &'a [Token]) -> (Option<ParserNode<'a>>, &
             let bang_node = ParserNode::new(
                 Vec::new(),
                 ParserNodeType::WriteFormat(WriteFormat::NewLine),
+                Some(&tokens[0]),
             );
             let (hash_bang_format, hash_bang_format_rest) = parse_hash_bang_format(&tokens[1..]);
 
@@ -1006,6 +1079,7 @@ fn parse_hash_bang_format<'a>(tokens: &'a [Token]) -> (Option<ParserNode<'a>>, &
                     Some(ParserNode::new(
                         vec![bang_node, hash_bang_format_node],
                         ParserNodeType::HashBangFormat,
+                        None,
                     )),
                     hash_bang_format_rest,
                 )
@@ -1014,6 +1088,7 @@ fn parse_hash_bang_format<'a>(tokens: &'a [Token]) -> (Option<ParserNode<'a>>, &
                     Some(ParserNode::new(
                         vec![bang_node],
                         ParserNodeType::HashBangFormat,
+                        None,
                     )),
                     &tokens[1..],
                 )
@@ -1023,6 +1098,7 @@ fn parse_hash_bang_format<'a>(tokens: &'a [Token]) -> (Option<ParserNode<'a>>, &
             let hash_node = ParserNode::new(
                 Vec::new(),
                 ParserNodeType::WriteFormat(WriteFormat::ClearScreen),
+                Some(&tokens[0]),
             );
             let (hash_bang_format, hash_bang_format_rest) = parse_hash_bang_format(&tokens[1..]);
 
@@ -1031,6 +1107,7 @@ fn parse_hash_bang_format<'a>(tokens: &'a [Token]) -> (Option<ParserNode<'a>>, &
                     Some(ParserNode::new(
                         vec![hash_node, hash_bang_format_node],
                         ParserNodeType::HashBangFormat,
+                        None,
                     )),
                     hash_bang_format_rest,
                 )
@@ -1039,6 +1116,7 @@ fn parse_hash_bang_format<'a>(tokens: &'a [Token]) -> (Option<ParserNode<'a>>, &
                     Some(ParserNode::new(
                         vec![hash_node],
                         ParserNodeType::HashBangFormat,
+                        None,
                     )),
                     &tokens[1..],
                 )
@@ -1065,12 +1143,14 @@ fn parse_format_expression_tail<'a>(
                 let write_to_col_node = ParserNode::new(
                     vec![equality_expression_node],
                     ParserNodeType::WriteFormat(WriteFormat::ToCol),
+                    Some(&tokens[0]),
                 );
 
                 Ok((
                     Some(ParserNode::new(
                         vec![write_to_col_node],
                         ParserNodeType::FormatExpressionTail,
+                        None,
                     )),
                     equality_expression_rest,
                 ))
@@ -1097,6 +1177,7 @@ fn parse_equality_expression<'a>(
                 Some(ParserNode::new(
                     vec![relational_expression_node, equality_expression_tail_node],
                     ParserNodeType::EqualityExpression,
+                    None,
                 )),
                 equality_expression_tail_rest,
             ))
@@ -1105,6 +1186,7 @@ fn parse_equality_expression<'a>(
                 Some(ParserNode::new(
                     vec![relational_expression_node],
                     ParserNodeType::EqualityExpression,
+                    None,
                 )),
                 relational_expression_rest,
             ))
@@ -1137,6 +1219,7 @@ fn parse_equality_expression_tail<'a>(
                             equality_expression_tail_node,
                         ],
                         ParserNodeType::EqualityExpressionTail,
+                        None,
                     )),
                     equality_expression_tail_rest,
                 ))
@@ -1145,6 +1228,7 @@ fn parse_equality_expression_tail<'a>(
                     Some(ParserNode::new(
                         vec![eq_op_node, relational_expression_node],
                         ParserNodeType::EqualityExpressionTail,
+                        None,
                     )),
                     relational_expression_rest,
                 ))
@@ -1170,6 +1254,7 @@ fn parse_eq_op<'a>(
             Some(ParserNode::new(
                 Vec::new(),
                 ParserNodeType::EqOp(EqOp::Equals),
+                Some(&tokens[0]),
             )),
             &tokens[1..],
         )),
@@ -1177,6 +1262,7 @@ fn parse_eq_op<'a>(
             Some(ParserNode::new(
                 Vec::new(),
                 ParserNodeType::EqOp(EqOp::NotEquals),
+                Some(&tokens[0]),
             )),
             &tokens[1..],
         )),
@@ -1199,6 +1285,7 @@ fn parse_relational_expression<'a>(
                 Some(ParserNode::new(
                     vec![expression_node, relational_expression_tail_node],
                     ParserNodeType::RelationalExpression,
+                    None,
                 )),
                 relational_expression_rest,
             ))
@@ -1207,6 +1294,7 @@ fn parse_relational_expression<'a>(
                 Some(ParserNode::new(
                     vec![expression_node],
                     ParserNodeType::RelationalExpression,
+                    None,
                 )),
                 expression_rest,
             ))
@@ -1238,6 +1326,7 @@ fn parse_relational_expression_tail<'a>(
                             relational_expression_tail_node,
                         ],
                         ParserNodeType::RelationalExpressionTail,
+                        None,
                     )),
                     relational_expression_tail_rest,
                 ))
@@ -1246,6 +1335,7 @@ fn parse_relational_expression_tail<'a>(
                     Some(ParserNode::new(
                         vec![rel_op_node, expression_node],
                         ParserNodeType::RelationalExpressionTail,
+                        None,
                     )),
                     expression_rest,
                 ))
@@ -1271,6 +1361,7 @@ fn parse_rel_op<'a>(
             Some(ParserNode::new(
                 Vec::new(),
                 ParserNodeType::RelOp(RelOp::GreaterThan),
+                Some(&tokens[0]),
             )),
             &tokens[1..],
         )),
@@ -1278,6 +1369,7 @@ fn parse_rel_op<'a>(
             Some(ParserNode::new(
                 Vec::new(),
                 ParserNodeType::RelOp(RelOp::LessThan),
+                Some(&tokens[0]),
             )),
             &tokens[1..],
         )),
@@ -1285,6 +1377,7 @@ fn parse_rel_op<'a>(
             Some(ParserNode::new(
                 Vec::new(),
                 ParserNodeType::RelOp(RelOp::GreaterThanOrEqualTo),
+                Some(&tokens[0]),
             )),
             &tokens[1..],
         )),
@@ -1292,6 +1385,7 @@ fn parse_rel_op<'a>(
             Some(ParserNode::new(
                 Vec::new(),
                 ParserNodeType::RelOp(RelOp::LessThanOrEqualTo),
+                Some(&tokens[0]),
             )),
             &tokens[1..],
         )),
@@ -1313,12 +1407,17 @@ fn parse_expression<'a>(
                 Some(ParserNode::new(
                     vec![term_node, expression_tail_node],
                     ParserNodeType::Expression,
+                    None,
                 )),
                 expression_tail_rest,
             ))
         } else {
             Ok((
-                Some(ParserNode::new(vec![term_node], ParserNodeType::Expression)),
+                Some(ParserNode::new(
+                    vec![term_node],
+                    ParserNodeType::Expression,
+                    None,
+                )),
                 term_rest,
             ))
         };
@@ -1344,6 +1443,7 @@ fn parse_expression_tail<'a>(
                     Some(ParserNode::new(
                         vec![add_op_node, term_node, expression_tail_node],
                         ParserNodeType::ExpressionTail,
+                        None,
                     )),
                     expression_tail_rest,
                 ))
@@ -1352,6 +1452,7 @@ fn parse_expression_tail<'a>(
                     Some(ParserNode::new(
                         vec![add_op_node, term_node],
                         ParserNodeType::ExpressionTail,
+                        None,
                     )),
                     expression_tail_rest,
                 ))
@@ -1375,6 +1476,7 @@ fn parse_add_op<'a>(tokens: &'a [Token]) -> (Option<ParserNode<'a>>, &'a [Token<
             Some(ParserNode::new(
                 Vec::new(),
                 ParserNodeType::AddOp(AddOp::Plus),
+                Some(&tokens[0]),
             )),
             &tokens[1..],
         ),
@@ -1382,6 +1484,7 @@ fn parse_add_op<'a>(tokens: &'a [Token]) -> (Option<ParserNode<'a>>, &'a [Token<
             Some(ParserNode::new(
                 Vec::new(),
                 ParserNodeType::AddOp(AddOp::Minus),
+                Some(&tokens[0]),
             )),
             &tokens[1..],
         ),
@@ -1403,12 +1506,17 @@ fn parse_term<'a>(
                 Some(ParserNode::new(
                     vec![unary_node, term_tail_node],
                     ParserNodeType::Term,
+                    None,
                 )),
                 term_tail_rest,
             ))
         } else {
             Ok((
-                Some(ParserNode::new(vec![unary_node], ParserNodeType::Term)),
+                Some(ParserNode::new(
+                    vec![unary_node],
+                    ParserNodeType::Term,
+                    None,
+                )),
                 unary_rest,
             ))
         };
@@ -1433,6 +1541,7 @@ fn parse_term_tail<'a>(
                 let parse_node = ParserNode::new(
                     vec![mul_node, unary_node, term_tail_node],
                     ParserNodeType::TermTail,
+                    None,
                 );
                 Ok((Some(parse_node), term_tail_rest))
             } else {
@@ -1440,6 +1549,7 @@ fn parse_term_tail<'a>(
                     Some(ParserNode::new(
                         vec![mul_node, unary_node],
                         ParserNodeType::TermTail,
+                        None,
                     )),
                     term_tail_rest,
                 ))
@@ -1463,6 +1573,7 @@ fn parse_mul_op<'a>(tokens: &'a [Token]) -> (Option<ParserNode<'a>>, &'a [Token<
             Some(ParserNode::new(
                 Vec::new(),
                 ParserNodeType::MulOp(MulOp::Times),
+                Some(&tokens[0]),
             )),
             &tokens[1..],
         ),
@@ -1470,6 +1581,7 @@ fn parse_mul_op<'a>(tokens: &'a [Token]) -> (Option<ParserNode<'a>>, &'a [Token<
             Some(ParserNode::new(
                 Vec::new(),
                 ParserNodeType::MulOp(MulOp::Divide),
+                Some(&tokens[0]),
             )),
             &tokens[1..],
         ),
@@ -1477,6 +1589,7 @@ fn parse_mul_op<'a>(tokens: &'a [Token]) -> (Option<ParserNode<'a>>, &'a [Token<
             Some(ParserNode::new(
                 Vec::new(),
                 ParserNodeType::MulOp(MulOp::Modulus),
+                Some(&tokens[0]),
             )),
             &tokens[1..],
         ),
@@ -1484,6 +1597,7 @@ fn parse_mul_op<'a>(tokens: &'a [Token]) -> (Option<ParserNode<'a>>, &'a [Token<
             Some(ParserNode::new(
                 Vec::new(),
                 ParserNodeType::MulOp(MulOp::IntegerDivide),
+                Some(&tokens[0]),
             )),
             &tokens[1..],
         ),
@@ -1505,6 +1619,7 @@ fn parse_unary<'a>(
                 Some(ParserNode::new(
                     vec![unary_op_node, unary_node],
                     ParserNodeType::Unary,
+                    None,
                 )),
                 unary_rest,
             ))
@@ -1528,6 +1643,7 @@ fn parse_unary_op<'a>(tokens: &'a [Token]) -> (Option<ParserNode<'a>>, &'a [Toke
             Some(ParserNode::new(
                 Vec::new(),
                 ParserNodeType::UnaryOp(UnaryOp::Plus),
+                Some(&tokens[0]),
             )),
             &tokens[1..],
         ),
@@ -1535,6 +1651,7 @@ fn parse_unary_op<'a>(tokens: &'a [Token]) -> (Option<ParserNode<'a>>, &'a [Toke
             Some(ParserNode::new(
                 Vec::new(),
                 ParserNodeType::UnaryOp(UnaryOp::Minus),
+                Some(&tokens[0]),
             )),
             &tokens[1..],
         ),
@@ -1542,6 +1659,7 @@ fn parse_unary_op<'a>(tokens: &'a [Token]) -> (Option<ParserNode<'a>>, &'a [Toke
             Some(ParserNode::new(
                 Vec::new(),
                 ParserNodeType::UnaryOp(UnaryOp::Not),
+                Some(&tokens[0]),
             )),
             &tokens[1..],
         ),
@@ -1565,12 +1683,17 @@ fn parse_exponential_term<'a>(
                 Some(ParserNode::new(
                     vec![term_node, exponential_term_tail_node],
                     ParserNodeType::ExpTerm,
+                    None,
                 )),
                 exponential_term_tail_rest,
             ))
         } else {
             Ok((
-                Some(ParserNode::new(vec![term_node], ParserNodeType::ExpTerm)),
+                Some(ParserNode::new(
+                    vec![term_node],
+                    ParserNodeType::ExpTerm,
+                    None,
+                )),
                 factor_rest,
             ))
         }
@@ -1597,6 +1720,7 @@ fn parse_exponential_term_tail<'a>(
                     Some(ParserNode::new(
                         vec![exponent_node, factor_node, exponential_term_tail_node],
                         ParserNodeType::ExpTermTail,
+                        None,
                     )),
                     exponential_term_tail_rest,
                 ))
@@ -1605,6 +1729,7 @@ fn parse_exponential_term_tail<'a>(
                     Some(ParserNode::new(
                         vec![exponent_node, factor_node],
                         ParserNodeType::ExpTermTail,
+                        None,
                     )),
                     factor_rest,
                 ))
@@ -1625,7 +1750,11 @@ fn parse_exponential<'a>(tokens: &'a [Token]) -> (Option<ParserNode<'a>>, &'a [T
 
     return match &tokens[0].token_type {
         TokenType::Power => (
-            Some(ParserNode::new(Vec::new(), ParserNodeType::ExpOp)),
+            Some(ParserNode::new(
+                Vec::new(),
+                ParserNodeType::ExpOp,
+                Some(&tokens[0]),
+            )),
             &tokens[1..],
         ),
         _ => (None, tokens),
@@ -1657,18 +1786,27 @@ fn parse_factor<'a>(
                 let mut mval = MVal::new(MValType::Int);
                 mval.set_int_val(double_val as i32);
 
-                ParserNode::new(Vec::new(), ParserNodeType::NumericLiteral(mval))
+                ParserNode::new(
+                    Vec::new(),
+                    ParserNodeType::NumericLiteral(mval),
+                    Some(&tokens[0]),
+                )
             } else {
                 let mut mval = MVal::new(MValType::Double);
                 mval.set_double_val(double_val);
 
-                ParserNode::new(Vec::new(), ParserNodeType::NumericLiteral(mval))
+                ParserNode::new(
+                    Vec::new(),
+                    ParserNodeType::NumericLiteral(mval),
+                    Some(&tokens[0]),
+                )
             };
 
             return Ok((
                 Some(ParserNode::new(
                     vec![numeric_literal],
                     ParserNodeType::Factor,
+                    None,
                 )),
                 &tokens[1..],
             ));
@@ -1680,12 +1818,14 @@ fn parse_factor<'a>(
             let string_literal = ParserNode::new(
                 Vec::new(),
                 ParserNodeType::StringLiteral(MVal::from_string(value.to_string())),
+                Some(&tokens[0]),
             );
 
             return Ok((
                 Some(ParserNode::new(
                     vec![string_literal],
                     ParserNodeType::Factor,
+                    None,
                 )),
                 &tokens[1..],
             ));
@@ -1694,13 +1834,17 @@ fn parse_factor<'a>(
         // Identifier
         TokenType::Identifier => {
             let identifier_name = tokens[0].value;
-            let identifier_node =
-                ParserNode::new(Vec::new(), ParserNodeType::Identifier(identifier_name));
+            let identifier_node = ParserNode::new(
+                Vec::new(),
+                ParserNodeType::Identifier(identifier_name),
+                Some(&tokens[0]),
+            );
 
             return Ok((
                 Some(ParserNode::new(
                     vec![identifier_node],
                     ParserNodeType::Factor,
+                    None,
                 )),
                 &tokens[1..],
             ));
@@ -1726,6 +1870,7 @@ fn parse_factor<'a>(
                     Some(ParserNode::new(
                         vec![equality_expression_node],
                         ParserNodeType::Expression,
+                        None,
                     )),
                     &expression_rest[1..],
                 ))

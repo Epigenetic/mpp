@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
+use crate::lexer::Token;
 use crate::parser::parse_node::ParserNodeType::Identifier;
 use crate::runtime::{MVal, MValType, Ops};
 use std::collections::HashMap;
@@ -13,14 +14,20 @@ pub struct ParserNode<'a> {
     pub children: Vec<ParserNode<'a>>,
     pub node_type: ParserNodeType<'a>,
     pub value_type: Option<MValType>,
+    pub token: Option<&'a Token<'a>>,
 }
 
 impl ParserNode<'_> {
-    pub fn new<'a>(children: Vec<ParserNode<'a>>, node_type: ParserNodeType<'a>) -> ParserNode<'a> {
+    pub fn new<'a>(
+        children: Vec<ParserNode<'a>>,
+        node_type: ParserNodeType<'a>,
+        token: Option<&'a Token<'a>>,
+    ) -> ParserNode<'a> {
         ParserNode {
             children,
             node_type,
             value_type: None,
+            token,
         }
     }
 
