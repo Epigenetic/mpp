@@ -443,8 +443,8 @@ fn tokenize_string(
     return Ok((
         Token::new(
             TokenType::StrLit,
-            position + 1,
-            end - 2 + position,
+            position,
+            end + position,
             line,
             &input[1..end - 1],
         ),
