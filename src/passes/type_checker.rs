@@ -77,12 +77,14 @@ pub fn check_types(
                     }
 
                     if child_type != val_type.unwrap() {
-                        return Err(TypeError {
-                            first_node_type: first_node.unwrap().value_type.unwrap(),
-                            second_node_type: child_type,
-                            first_node_bounds: first_node.unwrap().get_bounds(),
-                            second_node_bounds: child.get_bounds(),
-                        });
+                        if !(child_type.is_numeric_type() && val_type.unwrap().is_numeric_type()) {
+                            return Err(TypeError {
+                                first_node_type: first_node.unwrap().value_type.unwrap(),
+                                second_node_type: child_type,
+                                first_node_bounds: first_node.unwrap().get_bounds(),
+                                second_node_bounds: child.get_bounds(),
+                            });
+                        }
                     }
                 }
             }
