@@ -59,7 +59,6 @@ pub fn print_program(program: &Vec<u8>) {
             Ops::Push => {
                 let (value, offset) = MVal::from_bytes(&program[index + 1..]);
                 println!("PUSH: {:?}", value);
-                println!("index: {}, offset: {}", index, offset);
                 index += offset + 1;
             }
             Ops::Add => {
