@@ -6,7 +6,7 @@
 
 use crate::lexer::print_tokenize_error;
 use crate::parser::{print_parse_error, VariableDefinition};
-use crate::passes::check_types;
+use crate::passes::{check_types, print_type_error};
 use crate::runtime::print_program;
 use crate::runtime::vm::VM;
 use crate::Flags::{ExecutionOutput, File, LexerOutput, ParserOutput, PrintProgram, Test};
@@ -100,7 +100,7 @@ fn execute_line(input: String, flags: &Vec<Flags>) {
                         match check_types(&mut root, &variable_map) {
                             Ok(_) => {}
                             Err(error) => {
-                                println!("{}", error.message);
+                                print_type_error(error, &input_copy);
                                 return;
                             }
                         }
