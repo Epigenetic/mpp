@@ -8,20 +8,21 @@ use crate::parser::ParserNode;
 use crate::parser::ParserNodeType;
 use crate::runtime::MValType;
 use crate::VariableDefinition;
+use std::any::Any;
 use std::collections::HashMap;
 
 pub fn check_types(
     node: &mut ParserNode,
     variable_map: &HashMap<String, VariableDefinition>,
 ) -> Result<(), TypeError> {
-    match &node.node_type {
+    return match &node.node_type {
         ParserNodeType::NumericLiteral(num) => {
             node.value_type = Some(num.value_type);
-            return Ok(());
+            Ok(())
         }
         ParserNodeType::StringLiteral(_) => {
             node.value_type = Some(MValType::String);
-            return Ok(());
+            Ok(())
         }
         ParserNodeType::Identifier(identifier) => {
             node.value_type = Some(
@@ -30,11 +31,11 @@ pub fn check_types(
                     .expect("Missing declaration for variable in variable_map")
                     .val_type,
             );
-            return Ok(());
+            Ok(())
         }
         ParserNodeType::Type(type_val) => {
             node.value_type = Some(type_val.to_mval_type());
-            return Ok(());
+            Ok(())
         }
 
         //TODO: This is kind of messy, can we come up with a more maintainable solution?
@@ -44,14 +45,18 @@ pub fn check_types(
         | ParserNodeType::ExpOp
         | ParserNodeType::EqOp(_)
         | ParserNodeType::RelOp(_)
+        | ParserNodeType::WriteFormat(_)
         | ParserNodeType::IdentifierList
-        | ParserNodeType::IdentifierListTail
-        | ParserNodeType::AssignmentList
-        | ParserNodeType::AssignmentListTail
-        | ParserNodeType::WriteExpressionList
-        | ParserNodeType::WriteExpression
-        | ParserNodeType::WriteFormat(_) => {
-            return Ok(());
+        | ParserNodeType::IdentifierListTail => Ok(()),
+
+        ParserNodeType::WriteExpressionList | ParserNodeType::WriteExpressionListTail => {
+            // Each item of a write expression list can be of a different type, but
+            // the items themselves need to be type checked
+            for child in &mut node.children {
+                check_types(child, variable_map)?;
+            }
+
+            Ok(())
         }
 
         _ => {
@@ -60,6 +65,7 @@ pub fn check_types(
             }
 
             let mut val_type: Option<MValType> = None;
+            let mut first_node: Option<&ParserNode> = None;
 
             for child in &node.children {
                 let child_type = child.value_type;
@@ -67,21 +73,15 @@ pub fn check_types(
                 if let Some(child_type) = child_type {
                     if val_type == None {
                         val_type = Some(child_type);
+                        first_node = Some(child);
                     }
 
                     if child_type != val_type.unwrap() {
                         return Err(TypeError {
-                            // TODO: Make this more user friendly & informative
-                            message: format!(
-                                "Mismatched types {} and {:?} in {}",
-                                if let Some(val_type) = val_type {
-                                    format!("{:?}", val_type)
-                                } else {
-                                    "Unknown".to_string()
-                                },
-                                child_type,
-                                node
-                            ),
+                            first_node_type: first_node.unwrap().value_type.unwrap(),
+                            second_node_type: child_type,
+                            first_node_bounds: first_node.unwrap().get_bounds(),
+                            second_node_bounds: child.get_bounds(),
                         });
                     }
                 }
@@ -89,12 +89,41 @@ pub fn check_types(
 
             node.value_type = val_type;
 
-            return Ok(());
+            Ok(())
         }
+    };
+}
+
+pub fn print_type_error(error: TypeError, input: &str) {
+    let lines: Vec<&str> = input.lines().collect();
+    let (first_node_start, first_node_end, first_node_line) = error.first_node_bounds;
+    let (second_node_start, second_node_end, second_node_line) = error.second_node_bounds;
+
+    eprintln!("{}:{}", first_node_start, first_node_end);
+    eprintln!("{}", lines[first_node_line]);
+    for _ in 0..first_node_start {
+        eprint!(" ");
     }
+    for _ in first_node_start..first_node_end {
+        eprint!("^");
+    }
+    eprintln!(" Mismatched types {:?}", error.first_node_type);
+
+    eprintln!("{}:{}", second_node_start, second_node_end);
+    eprintln!("{}", lines[second_node_line]);
+    for _ in 0..second_node_start {
+        eprint!(" ");
+    }
+    for _ in second_node_start..second_node_end {
+        eprint!("^");
+    }
+    eprintln!(" and {:?}", error.second_node_type);
 }
 
 #[derive(Debug)]
 pub struct TypeError {
-    pub message: String,
+    first_node_type: MValType,
+    second_node_type: MValType,
+    first_node_bounds: (usize, usize, usize),
+    second_node_bounds: (usize, usize, usize),
 }
