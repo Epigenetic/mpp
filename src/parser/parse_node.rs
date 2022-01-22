@@ -554,6 +554,40 @@ impl ParserNode<'_> {
         }
     }
 
+    pub fn get_bounds(&self) -> (usize, usize, usize) {
+        if self.children.len() == 0 {
+            return (
+                self.token.unwrap().start,
+                self.token.unwrap().end,
+                self.token.unwrap().line,
+            );
+        }
+
+        // TODO: This approach of identifying bounds is a bit too aggressive. We should try
+        //       to find a method by which we don't capture unnecessary content
+        let first_child = &self.children[0];
+        let last_child = &self.children[self.children.len() - 1];
+        let (first_child_start, line) = first_child.get_start();
+
+        return (first_child_start, last_child.get_end(), line);
+    }
+
+    fn get_start(&self) -> (usize, usize) {
+        if self.children.len() == 0 {
+            return (self.token.unwrap().start, self.token.unwrap().line);
+        }
+
+        return self.children[0].get_start();
+    }
+
+    fn get_end(&self) -> usize {
+        if self.children.len() == 0 {
+            return self.token.unwrap().end;
+        }
+
+        return self.children[self.children.len() - 1].get_end();
+    }
+
     /// Back patch a jump to the final value. Validates jump is not larger than max jump size.
     /// # Parameters
     /// * `program` - Program vector to update
