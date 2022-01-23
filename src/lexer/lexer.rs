@@ -470,7 +470,7 @@ fn tokenize_write(input: &str, row: usize, line: usize) -> Result<(Token, usize)
     }
 
     // Full write command
-    if (&input[..5] == "write" || &input[..5] == "WRITE")
+    if input[..5].eq_ignore_ascii_case("write")
         && (str_array.len() == 5
             || str_array[5].is_whitespace()
             || !str_array[5].is_ascii_alphabetic())
@@ -509,7 +509,7 @@ fn tokenize_new(input: &str, row: usize, line: usize) -> Result<(Token, usize), 
     }
 
     // Full new command
-    if (&input[..3] == "new" || &input[..3] == "NEW")
+    if input[..3].eq_ignore_ascii_case("new")
         && (str_array.len() == 3
             || str_array[3].is_whitespace()
             || !str_array[3].is_ascii_alphabetic())
@@ -552,7 +552,7 @@ fn tokenize_set_or_string(
     }
 
     // Full set command
-    if (&input[..3] == "set" || &input[..3] == "SET")
+    if input[..3].eq_ignore_ascii_case("set")
         && (str_array.len() == 3
             || str_array[3].is_whitespace()
             || !str_array[3].is_ascii_alphabetic())
@@ -570,7 +570,7 @@ fn tokenize_set_or_string(
     }
 
     // Short string keyword (str or STR)
-    if (&input[..3] == "str" || &input[..3] == "STR")
+    if input[..3].eq_ignore_ascii_case("str")
         && (str_array.len() == 3
             || str_array[3].is_whitespace()
             || !str_array[3].is_ascii_alphabetic())
@@ -588,7 +588,7 @@ fn tokenize_set_or_string(
     }
 
     // Full string keyword
-    if (&input[..6] == "string" || &input[..6] == "STRING")
+    if input[..6].eq_ignore_ascii_case("string")
         && (str_array.len() == 6
             || str_array[6].is_whitespace()
             || !str_array[6].is_ascii_alphabetic())
@@ -631,7 +631,7 @@ fn tokenize_if_or_int(
     }
 
     // Full if command
-    if (&input[..2] == "if" || &input[..2] == "IF")
+    if input[..2].eq_ignore_ascii_case("if")
         && (str_array.len() == 2
             || str_array[2].is_whitespace()
             || !str_array[2].is_ascii_alphabetic())
@@ -649,7 +649,7 @@ fn tokenize_if_or_int(
     }
 
     // Short integer keyword (int or INT)
-    if (&input[..3] == "int" || &input[..3] == "INT")
+    if input[..3].eq_ignore_ascii_case("int")
         && (str_array.len() == 3
             || str_array[3].is_whitespace()
             || !str_array[3].is_ascii_alphabetic())
@@ -667,7 +667,7 @@ fn tokenize_if_or_int(
     }
 
     // Full integer keyword
-    if (&input[..7] == "integer" || &input[..7] == "INTEGER")
+    if input[..7].eq_ignore_ascii_case("integer")
         && (str_array.len() == 7
             || str_array[7].is_whitespace()
             || !str_array[7].is_ascii_alphabetic())
@@ -706,7 +706,7 @@ fn tokenize_else(input: &str, row: usize, line: usize) -> Result<(Token, usize),
     }
 
     // Full else command
-    if (&input[..4] == "else" || &input[..4] == "ELSE")
+    if input[..4].eq_ignore_ascii_case("else")
         && (str_array.len() == 4
             || str_array[4].is_whitespace()
             || !str_array[4].is_ascii_alphabetic())
@@ -745,11 +745,10 @@ fn tokenize_for(input: &str, row: usize, line: usize) -> Result<(Token, usize), 
     }
 
     // Full for command
-    if &input[..3] == "for"
-        || &input[..3] == "FOR"
-            && (str_array.len() == 3
-                || str_array[3].is_whitespace()
-                || !str_array[3].is_ascii_alphabetic())
+    if input[..3].eq_ignore_ascii_case("for")
+        && (str_array.len() == 3
+            || str_array[3].is_whitespace()
+            || !str_array[3].is_ascii_alphabetic())
     {
         return Ok((
             Token::new(
@@ -777,7 +776,7 @@ fn tokenize_do_or_double(
     //TODO Lex do
 
     // Short double keyword (dbl or DBL)
-    if (&input[..3] == "dbl" || &input[..3] == "DBL")
+    if input[..3].eq_ignore_ascii_case("dbl")
         && (str_array.len() == 3
             || str_array[3].is_whitespace()
             || !str_array[3].is_ascii_alphabetic())
@@ -795,7 +794,7 @@ fn tokenize_do_or_double(
     }
 
     // Full double keyword
-    if (&input[..6] == "double" || &input[..6] == "DOUBLE")
+    if input[..6].eq_ignore_ascii_case("double")
         && (str_array.len() == 6
             || str_array[6].is_whitespace()
             || !str_array[6].is_ascii_alphabetic())
