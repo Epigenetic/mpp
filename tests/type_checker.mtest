@@ -1,0 +1,35 @@
+;; Literals
+w 1+"1"
+;;;2:3
+;;;w 1+"1"
+;;;  ^ Mismatched types Int
+;;;3:7
+;;;w 1+"1"
+;;;   ^^^^ and String
+
+;; Literal and Variable
+n foo:int s foo=1 w foo+"1"
+;;;20:23
+;;;n foo:int s foo=1 w foo+"1"
+;;;                    ^^^ Mismatched types Int
+;;;23:27
+;;;n foo:int s foo=1 w foo+"1"
+;;;                       ^^^^ and String
+
+;; Variables
+n foo:int,bar:string w foo+bar
+;;;23:26
+;;;n foo:int,bar:string w foo+bar
+;;;                       ^^^ Mismatched types Int
+;;;26:30
+;;;n foo:int,bar:string w foo+bar
+;;;                          ^^^^ and String
+
+;; Variable Assignment
+n foo:int s foo="abc"
+;;;12:15
+;;;n foo:int s foo="abc"
+;;;            ^^^ Mismatched types Int
+;;;16:21
+;;;n foo:int s foo="abc"
+;;;                ^^^^^ and String
