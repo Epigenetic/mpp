@@ -637,7 +637,7 @@ fn tokenize_if_or_int(
     {
         return Ok((
             Token::new(
-                TokenType::Reserved(ReservedToken::Int),
+                TokenType::Reserved(ReservedToken::Integer),
                 row,
                 row + 3,
                 line,
@@ -1456,7 +1456,7 @@ mod tests {
     }
     //endregion
 
-    //region Lex Int Tests
+    //region Lex Integer Tests
     #[test]
     fn test_lex_int() {
         let input = "int";
@@ -1484,7 +1484,7 @@ mod tests {
             assert_eq!(tokens_ok.len(), 1);
             assert_eq!(
                 tokens_ok[0],
-                Token::new(TokenType::Reserved(ReservedToken::Int), 0, 3, 0, "INT")
+                Token::new(TokenType::Reserved(ReservedToken::Integer), 0, 3, 0, "INT")
             )
         }
     }
