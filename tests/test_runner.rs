@@ -107,6 +107,11 @@ fn if_tests() {
     run_directory_tests(Path::new("tests/if_tests/passing"));
 }
 
+#[test]
+fn type_checker_tests() {
+    run_error_test("tests/type_checker.mtest");
+}
+
 fn run_directory_tests(dir: &Path) {
     for test_dir in fs::read_dir(dir).expect("Unable to read directory") {
         run_directory_test(test_dir.expect("Error reading directory"))
