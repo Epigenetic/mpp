@@ -569,6 +569,25 @@ fn tokenize_set_or_string(
         ));
     }
 
+    // Short string keyword (str or STR)
+    if (&input[..3] == "str" || &input[..3] == "STR")
+        && (str_array.len() == 3
+            || str_array[3].is_whitespace()
+            || !str_array[3].is_ascii_alphabetic())
+    {
+        return Ok((
+            Token::new(
+                TokenType::Reserved(ReservedToken::String),
+                row,
+                row + 3,
+                line,
+                &input[..3],
+            ),
+            3,
+        ));
+    }
+
+    // Full string keyword
     if (&input[..6] == "string" || &input[..6] == "STRING")
         && (str_array.len() == 6
             || str_array[6].is_whitespace()
@@ -629,7 +648,7 @@ fn tokenize_if_or_int(
         ));
     }
 
-    // Int keyword
+    // Short integer keyword (int or INT)
     if (&input[..3] == "int" || &input[..3] == "INT")
         && (str_array.len() == 3
             || str_array[3].is_whitespace()
@@ -644,6 +663,24 @@ fn tokenize_if_or_int(
                 &input[..3],
             ),
             3,
+        ));
+    }
+
+    // Full integer keyword
+    if (&input[..7] == "integer" || &input[..7] == "INTEGER")
+        && (str_array.len() == 7
+            || str_array[7].is_whitespace()
+            || !str_array[7].is_ascii_alphabetic())
+    {
+        return Ok((
+            Token::new(
+                TokenType::Reserved(ReservedToken::Integer),
+                row,
+                row + 7,
+                line,
+                &input[..7],
+            ),
+            7,
         ));
     }
 
@@ -739,7 +776,25 @@ fn tokenize_do_or_double(
 
     //TODO Lex do
 
-    // Double keyword
+    // Short double keyword (dbl or DBL)
+    if (&input[..3] == "dbl" || &input[..3] == "DBL")
+        && (str_array.len() == 3
+            || str_array[3].is_whitespace()
+            || !str_array[3].is_ascii_alphabetic())
+    {
+        return Ok((
+            Token::new(
+                TokenType::Reserved(ReservedToken::Double),
+                row,
+                row + 3,
+                line,
+                &input[..3],
+            ),
+            3,
+        ));
+    }
+
+    // Full double keyword
     if (&input[..6] == "double" || &input[..6] == "DOUBLE")
         && (str_array.len() == 6
             || str_array[6].is_whitespace()
@@ -1459,6 +1514,50 @@ mod tests {
     //region Lex Integer Tests
     #[test]
     fn test_lex_int() {
+        let input = "integer";
+        let mut tokenizer = Tokenizer::new(input.to_string());
+        let tokens = tokenizer.tokenize();
+
+        assert!(tokens.is_ok());
+        if let Ok(tokens_ok) = tokens {
+            assert_eq!(tokens_ok.len(), 1);
+            assert_eq!(
+                tokens_ok[0],
+                Token::new(
+                    TokenType::Reserved(ReservedToken::Integer),
+                    0,
+                    7,
+                    0,
+                    "integer"
+                )
+            )
+        }
+    }
+
+    #[test]
+    fn test_lex_int_cap() {
+        let input = "INTEGER";
+        let mut tokenizer = Tokenizer::new(input.to_string());
+        let tokens = tokenizer.tokenize();
+
+        assert!(tokens.is_ok());
+        if let Ok(tokens_ok) = tokens {
+            assert_eq!(tokens_ok.len(), 1);
+            assert_eq!(
+                tokens_ok[0],
+                Token::new(
+                    TokenType::Reserved(ReservedToken::Integer),
+                    0,
+                    7,
+                    0,
+                    "INTEGER"
+                )
+            )
+        }
+    }
+
+    #[test]
+    fn test_lex_int_short() {
         let input = "int";
         let mut tokenizer = Tokenizer::new(input.to_string());
         let tokens = tokenizer.tokenize();
@@ -1468,13 +1567,13 @@ mod tests {
             assert_eq!(tokens_ok.len(), 1);
             assert_eq!(
                 tokens_ok[0],
-                Token::new(TokenType::Reserved(ReservedToken::Int), 0, 3, 0, "int")
+                Token::new(TokenType::Reserved(ReservedToken::Integer), 0, 3, 0, "int")
             )
         }
     }
 
     #[test]
-    fn test_lex_int_cap() {
+    fn test_lex_int_cap_short() {
         let input = "INT";
         let mut tokenizer = Tokenizer::new(input.to_string());
         let tokens = tokenizer.tokenize();
