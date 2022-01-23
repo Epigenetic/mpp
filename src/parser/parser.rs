@@ -595,7 +595,7 @@ fn parse_identifier_list<'a>(
             ParserNodeType::Type(Type::String),
             Some(&tokens[2]),
         ),
-        TokenType::Reserved(ReservedToken::Int) => ParserNode::new(
+        TokenType::Reserved(ReservedToken::Integer) => ParserNode::new(
             Vec::new(),
             ParserNodeType::Type(Type::Int),
             Some(&tokens[2]),
@@ -675,7 +675,7 @@ fn parse_identifier_list_tail<'a>(
                     ParserNodeType::Type(Type::String),
                     Some(&tokens[3]),
                 ),
-                TokenType::Reserved(ReservedToken::Int) => ParserNode::new(
+                TokenType::Reserved(ReservedToken::Integer) => ParserNode::new(
                     Vec::new(),
                     ParserNodeType::Type(Type::Int),
                     Some(&tokens[3]),

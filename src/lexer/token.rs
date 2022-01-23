@@ -82,7 +82,7 @@ pub enum ReservedToken {
     If,
     Else,
     For,
-    Int,
+    Integer,
     String,
     Double,
 }

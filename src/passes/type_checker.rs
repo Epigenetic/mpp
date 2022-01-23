@@ -8,7 +8,6 @@ use crate::parser::ParserNode;
 use crate::parser::ParserNodeType;
 use crate::runtime::MValType;
 use crate::VariableDefinition;
-use std::any::Any;
 use std::collections::HashMap;
 
 pub fn check_types(
