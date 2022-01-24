@@ -72,6 +72,8 @@ pub enum TokenType {
     Comma,
     Colon,
     NewLine,
+    LCurly,
+    RCurly,
 }
 
 #[derive(PartialEq, Debug)]

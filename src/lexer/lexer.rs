@@ -254,6 +254,28 @@ impl Tokenizer {
                     self.position += 1;
                     self.row += 1;
                 }
+                '{' => {
+                    tokens.push(Token::new(
+                        TokenType::LCurly,
+                        self.row,
+                        self.row + 1,
+                        self.line,
+                        &self.input[self.position..self.position + 1],
+                    ));
+                    self.position += 1;
+                    self.row += 1;
+                }
+                '}' => {
+                    tokens.push(Token::new(
+                        TokenType::RCurly,
+                        self.row,
+                        self.row + 1,
+                        self.line,
+                        &self.input[self.position..self.position + 1],
+                    ));
+                    self.position += 1;
+                    self.row += 1;
+                }
                 'w' | 'W' => {
                     let (token, size) =
                         tokenize_write(&self.input[self.position..], self.row, self.line)?;
@@ -1731,5 +1753,35 @@ mod tests {
             )
         }
     }
+    //endregion
+
+    //region Lex Curly tests
+
+    #[test]
+    fn test_lex_l_curly() {
+        let input = "{";
+        let mut tokenizer = Tokenizer::new(input.to_string());
+        let tokens = tokenizer.tokenize();
+
+        assert!(tokens.is_ok());
+        if let Ok(tokens_ok) = tokens {
+            assert_eq!(tokens_ok.len(), 1);
+            assert_eq!(tokens_ok[0], Token::new(TokenType::LCurly, 0, 1, 0, "{"))
+        }
+    }
+
+    #[test]
+    fn test_lex_r_curly() {
+        let input = "}";
+        let mut tokenizer = Tokenizer::new(input.to_string());
+        let tokens = tokenizer.tokenize();
+
+        assert!(tokens.is_ok());
+        if let Ok(tokens_ok) = tokens {
+            assert_eq!(tokens_ok.len(), 1);
+            assert_eq!(tokens_ok[0], Token::new(TokenType::RCurly, 0, 1, 0, "}"))
+        }
+    }
+
     //endregion
 }
