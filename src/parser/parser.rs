@@ -769,39 +769,17 @@ fn parse_identifier_list<'a>(
         });
     }
 
-    let identifier_type_node = match &tokens[2].token_type {
-        TokenType::Reserved(ReservedToken::String) => ParserNode::new(
-            Vec::new(),
-            ParserNodeType::Type(Type::String),
-            Some(&tokens[2]),
-        ),
-        TokenType::Reserved(ReservedToken::Integer) => ParserNode::new(
-            Vec::new(),
-            ParserNodeType::Type(Type::Int),
-            Some(&tokens[2]),
-        ),
-        TokenType::Reserved(ReservedToken::Double) => ParserNode::new(
-            Vec::new(),
-            ParserNodeType::Type(Type::Double),
-            Some(&tokens[2]),
-        ),
-        _ => {
-            return Err(ParseError {
-                remaining_tokens: &tokens[2..],
-                message: "Expecting type".to_string(),
-            })
-        }
-    };
+    let (identifier_type_node, identifier_type_rest) = parse_type(&tokens[2..])?;
 
     let (identifier_list_tail, identifier_list_tail_rest) =
-        parse_identifier_list_tail(&tokens[3..])?;
+        parse_identifier_list_tail(identifier_type_rest)?;
 
     if let Some(identifier_list_tail_node) = identifier_list_tail {
         Ok((
             Some(ParserNode::new(
                 vec![
                     identifier_node,
-                    identifier_type_node,
+                    identifier_type_node.unwrap(),
                     identifier_list_tail_node,
                 ],
                 ParserNodeType::IdentifierList,
@@ -812,7 +790,7 @@ fn parse_identifier_list<'a>(
     } else {
         Ok((
             Some(ParserNode::new(
-                vec![identifier_node, identifier_type_node],
+                vec![identifier_node, identifier_type_node.unwrap()],
                 ParserNodeType::IdentifierList,
                 None,
             )),
@@ -849,39 +827,17 @@ fn parse_identifier_list_tail<'a>(
                 });
             }
 
-            let identifier_type_node = match &tokens[3].token_type {
-                TokenType::Reserved(ReservedToken::String) => ParserNode::new(
-                    Vec::new(),
-                    ParserNodeType::Type(Type::String),
-                    Some(&tokens[3]),
-                ),
-                TokenType::Reserved(ReservedToken::Integer) => ParserNode::new(
-                    Vec::new(),
-                    ParserNodeType::Type(Type::Int),
-                    Some(&tokens[3]),
-                ),
-                TokenType::Reserved(ReservedToken::Double) => ParserNode::new(
-                    Vec::new(),
-                    ParserNodeType::Type(Type::Double),
-                    Some(&tokens[3]),
-                ),
-                _ => {
-                    return Err(ParseError {
-                        remaining_tokens: &tokens[2..],
-                        message: "Expecting type".to_string(),
-                    })
-                }
-            };
+            let (identifier_type_node, identifier_type_rest) = parse_type(&tokens[3..])?;
 
             let (identifier_list_tail, identifier_list_tail_rest) =
-                parse_identifier_list_tail(&tokens[4..])?;
+                parse_identifier_list_tail(identifier_type_rest)?;
 
             if let Some(identifier_list_tail_node) = identifier_list_tail {
                 Ok((
                     Some(ParserNode::new(
                         vec![
                             identifier_node,
-                            identifier_type_node,
+                            identifier_type_node.unwrap(),
                             identifier_list_tail_node,
                         ],
                         ParserNodeType::IdentifierListTail,
@@ -892,7 +848,7 @@ fn parse_identifier_list_tail<'a>(
             } else {
                 Ok((
                     Some(ParserNode::new(
-                        vec![identifier_node, identifier_type_node],
+                        vec![identifier_node, identifier_type_node.unwrap()],
                         ParserNodeType::IdentifierListTail,
                         None,
                     )),
@@ -902,6 +858,37 @@ fn parse_identifier_list_tail<'a>(
         }
         _ => Ok((None, tokens)),
     };
+}
+
+// Type -> String | Integer | Double
+fn parse_type<'a>(
+    tokens: &'a [Token],
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
+    let type_node = match &tokens[0].token_type {
+        TokenType::Reserved(ReservedToken::String) => ParserNode::new(
+            Vec::new(),
+            ParserNodeType::Type(Type::String),
+            Some(&tokens[0]),
+        ),
+        TokenType::Reserved(ReservedToken::Integer) => ParserNode::new(
+            Vec::new(),
+            ParserNodeType::Type(Type::Int),
+            Some(&tokens[0]),
+        ),
+        TokenType::Reserved(ReservedToken::Double) => ParserNode::new(
+            Vec::new(),
+            ParserNodeType::Type(Type::Double),
+            Some(&tokens[0]),
+        ),
+        _ => {
+            return Err(ParseError {
+                remaining_tokens: tokens,
+                message: "Expecting type".to_string(),
+            })
+        }
+    };
+
+    return Ok((Some(type_node), &tokens[1..]));
 }
 
 /// SetStatement -> Set AssignmentList
