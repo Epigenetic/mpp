@@ -790,11 +790,6 @@ impl Type {
     }
 }
 
-pub struct VariableDefinition {
-    stack_position: usize,
-    pub val_type: MValType,
-}
-
 pub fn print_parse_tree(root: &ParserNode) {
     print_parse_tree_recursive(root, 0);
 }

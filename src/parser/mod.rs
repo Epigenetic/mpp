@@ -6,10 +6,13 @@
 
 mod parse_node;
 mod parser;
+mod scope;
 
 pub use parse_node::print_parse_tree;
 pub use parse_node::ParserNode;
 pub use parse_node::ParserNodeType;
-pub use parse_node::VariableDefinition;
 pub use parser::print_parse_error;
 pub use parser::Parser;
+pub use scope::Scope;
+pub use scope::Scopes;
+pub use scope::VariableDefinition;
