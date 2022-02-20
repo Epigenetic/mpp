@@ -225,7 +225,7 @@ impl ParserNode<'_> {
                 // IdentifierList
                 self.children[0].to_bytes(program, identifier_scopes)
             }
-            ParserNodeType::IdentifierList => {
+            ParserNodeType::IdentifierList | ParserNodeType::IdentifierListTail => {
                 // Identifier
                 let identifier_node = &self.children[0];
                 if let ParserNodeType::Identifier(identifier) = identifier_node.node_type {
@@ -243,33 +243,7 @@ impl ParserNode<'_> {
                     self.children[2].to_bytes(program, identifier_scopes);
                 }
             }
-            ParserNodeType::IdentifierListTail => {
-                // Identifier
-                let identifier_node = &self.children[0];
-                if let ParserNodeType::Identifier(identifier) = identifier_node.node_type {
-                    if variable_map.contains_key(identifier) {
-                        panic!("Variable already defined: {}.", identifier)
-                    }
-                    program.push(Ops::New as u8);
 
-                    if let ParserNodeType::Type(type_val) = &self.children[1].node_type {
-                        variable_map.insert(
-                            identifier.to_string(),
-                            VariableDefinition {
-                                stack_position: variable_map.len(),
-                                val_type: type_val.to_mval_type(),
-                            },
-                        );
-                        self.children[1].to_bytes(program, variable_map)
-                    }
-                }
-
-                // Has an IdentifierListTail
-                if self.children.len() == 3 {
-                    // IdentifierListTail
-                    self.children[2].to_bytes(program, variable_map);
-                }
-            }
             ParserNodeType::SetStatement => {
                 // AssignmentList
                 self.children[0].to_bytes(program, identifier_scopes);
