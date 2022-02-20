@@ -6,6 +6,7 @@
 
 use crate::lexer::Token;
 use crate::parser::parse_node::ParserNodeType::Identifier;
+use crate::parser::scope::{ParameterDefinition, Scopes};
 use crate::runtime::{MVal, MValType, Ops};
 use std::collections::HashMap;
 use std::fmt;
@@ -31,52 +32,48 @@ impl ParserNode<'_> {
         }
     }
 
-    pub fn to_bytes(
-        &self,
-        program: &mut Vec<u8>,
-        variable_map: &mut HashMap<String, VariableDefinition>,
-    ) {
+    pub fn to_bytes(&self, program: &mut Vec<u8>, identifier_scopes: &mut Scopes) {
         match &self.node_type {
             ParserNodeType::Block(_) => {
                 // Lines
-                self.children[0].to_bytes(program, variable_map);
+                self.children[0].to_bytes(program, identifier_scopes);
             }
 
             ParserNodeType::Lines => {
                 //Line
-                self.children[0].to_bytes(program, variable_map);
+                self.children[0].to_bytes(program, identifier_scopes);
 
                 // Has a Lines
                 if self.children.len() == 2 {
-                    self.children[1].to_bytes(program, variable_map);
+                    self.children[1].to_bytes(program, identifier_scopes);
                 }
             }
             ParserNodeType::Line => {
                 if self.children.len() > 0 {
                     // Statement
-                    self.children[0].to_bytes(program, variable_map);
+                    self.children[0].to_bytes(program, identifier_scopes);
 
                     // Has a LineTail
                     if self.children.len() == 2 {
                         // LineTail
-                        self.children[1].to_bytes(program, variable_map)
+                        self.children[1].to_bytes(program, identifier_scopes)
                     }
                 }
             }
 
             ParserNodeType::Statements => {
                 // Statement
-                self.children[0].to_bytes(program, variable_map);
+                self.children[0].to_bytes(program, identifier_scopes);
 
                 // Has a Statements
                 if self.children.len() == 2 {
                     // Statement
-                    self.children[1].to_bytes(program, variable_map)
+                    self.children[1].to_bytes(program, identifier_scopes)
                 }
             }
             ParserNodeType::Statement => {
                 // WriteStatement | SetStatement | NewStatement
-                self.children[0].to_bytes(program, variable_map)
+                self.children[0].to_bytes(program, identifier_scopes)
             }
 
             ParserNodeType::ForStatement => {
@@ -84,7 +81,7 @@ impl ParserNode<'_> {
                 if self.children[0].node_type == ParserNodeType::Statements {
                     let start_pos = program.len();
 
-                    self.children[0].to_bytes(program, variable_map);
+                    self.children[0].to_bytes(program, identifier_scopes);
 
                     let end_pos = program.len();
 
@@ -101,11 +98,11 @@ impl ParserNode<'_> {
                     let for_bound_node = &self.children[0];
 
                     // EqualityExpression
-                    for_bound_node.children[1].to_bytes(program, variable_map);
+                    for_bound_node.children[1].to_bytes(program, identifier_scopes);
                     program.push(Ops::Set as u8);
 
                     //Identifier
-                    for_bound_node.children[0].to_bytes(program, variable_map);
+                    for_bound_node.children[0].to_bytes(program, identifier_scopes);
 
                     let loop_start_pos = program.len();
                     let mut for_condition_pos: Option<usize> = None;
@@ -115,10 +112,10 @@ impl ParserNode<'_> {
                         program.push(Ops::Get as u8);
 
                         // Identifier
-                        for_bound_node.children[0].to_bytes(program, variable_map);
+                        for_bound_node.children[0].to_bytes(program, identifier_scopes);
 
                         // EqualityExpression
-                        for_bound_node.children[3].to_bytes(program, variable_map);
+                        for_bound_node.children[3].to_bytes(program, identifier_scopes);
                         program.push(Ops::LessThanOrEqualTo as u8);
 
                         // If should not loop jump over loop body
@@ -129,22 +126,22 @@ impl ParserNode<'_> {
                     }
 
                     // Statements
-                    self.children[1].to_bytes(program, variable_map);
+                    self.children[1].to_bytes(program, identifier_scopes);
 
                     // Has a second EqualityExpression
                     if for_bound_node.children.len() > 2 {
                         // EqualityExpression
-                        for_bound_node.children[2].to_bytes(program, variable_map);
+                        for_bound_node.children[2].to_bytes(program, identifier_scopes);
                         program.push(Ops::Get as u8);
 
                         // Identifier
-                        for_bound_node.children[0].to_bytes(program, variable_map);
+                        for_bound_node.children[0].to_bytes(program, identifier_scopes);
 
                         program.push(Ops::Add as u8);
                         program.push(Ops::Set as u8);
 
                         // Identifier
-                        for_bound_node.children[0].to_bytes(program, variable_map);
+                        for_bound_node.children[0].to_bytes(program, identifier_scopes);
                     }
                     let end_pos = program.len();
                     let offset = end_pos - loop_start_pos;
@@ -171,7 +168,7 @@ impl ParserNode<'_> {
 
             ParserNodeType::IfStatement => {
                 // EqualityExpression
-                self.children[0].to_bytes(program, variable_map);
+                self.children[0].to_bytes(program, identifier_scopes);
 
                 program.push(Ops::JumpIfFalse as u8);
                 program.push(0xff);
@@ -179,7 +176,7 @@ impl ParserNode<'_> {
                 let if_start_pos = program.len();
 
                 // Statements
-                self.children[1].to_bytes(program, variable_map);
+                self.children[1].to_bytes(program, identifier_scopes);
 
                 // Has an ElseStatement
                 if self.children.len() == 3 {
@@ -197,7 +194,7 @@ impl ParserNode<'_> {
                     );
 
                     // ElseStatement
-                    self.children[2].to_bytes(program, variable_map);
+                    self.children[2].to_bytes(program, identifier_scopes);
 
                     let else_end_pos = program.len();
                     let else_offset = else_end_pos - else_start_pos;
@@ -221,38 +218,29 @@ impl ParserNode<'_> {
 
             ParserNodeType::ElseStatement => {
                 // Statements
-                self.children[0].to_bytes(program, variable_map);
+                self.children[0].to_bytes(program, identifier_scopes);
             }
 
             ParserNodeType::NewStatement => {
                 // IdentifierList
-                self.children[0].to_bytes(program, variable_map)
+                self.children[0].to_bytes(program, identifier_scopes)
             }
             ParserNodeType::IdentifierList => {
                 // Identifier
                 let identifier_node = &self.children[0];
                 if let ParserNodeType::Identifier(identifier) = identifier_node.node_type {
-                    if variable_map.contains_key(identifier) {
-                        panic!("Variable already defined: {}.", identifier)
-                    }
-
                     program.push(Ops::New as u8);
                     if let ParserNodeType::Type(type_val) = &self.children[1].node_type {
-                        variable_map.insert(
-                            identifier.to_string(),
-                            VariableDefinition {
-                                stack_position: variable_map.len(),
-                                val_type: type_val.to_mval_type(),
-                            },
-                        );
-                        self.children[1].to_bytes(program, variable_map)
+                        identifier_scopes
+                            .add_variable(identifier.to_string(), type_val.to_mval_type());
+                        self.children[1].to_bytes(program, identifier_scopes)
                     }
                 }
 
                 // Has an IdentifierListTail
                 if self.children.len() == 3 {
                     // IdentifierListTail
-                    self.children[2].to_bytes(program, variable_map);
+                    self.children[2].to_bytes(program, identifier_scopes);
                 }
             }
             ParserNodeType::IdentifierListTail => {
@@ -284,42 +272,42 @@ impl ParserNode<'_> {
             }
             ParserNodeType::SetStatement => {
                 // AssignmentList
-                self.children[0].to_bytes(program, variable_map);
+                self.children[0].to_bytes(program, identifier_scopes);
             }
             ParserNodeType::AssignmentList => {
                 // Assignment
-                self.children[0].to_bytes(program, variable_map);
+                self.children[0].to_bytes(program, identifier_scopes);
 
                 // Has an AssignmentListTail
                 if self.children.len() == 2 {
-                    self.children[1].to_bytes(program, variable_map)
+                    self.children[1].to_bytes(program, identifier_scopes)
                 }
             }
             ParserNodeType::AssignmentListTail => {
                 // Assignment
-                self.children[0].to_bytes(program, variable_map);
+                self.children[0].to_bytes(program, identifier_scopes);
 
                 // Has an AssignmentListTail
                 if self.children.len() == 2 {
-                    self.children[1].to_bytes(program, variable_map)
+                    self.children[1].to_bytes(program, identifier_scopes)
                 }
             }
             ParserNodeType::AssignmentStatement => {
                 // RelationalExpression
-                self.children[1].to_bytes(program, variable_map);
+                self.children[1].to_bytes(program, identifier_scopes);
 
                 program.push(Ops::Set as u8);
 
                 // Identifier
-                self.children[0].to_bytes(program, variable_map)
+                self.children[0].to_bytes(program, identifier_scopes)
             }
             ParserNodeType::WriteStatement => {
                 // WriteExpressionList
-                self.children[0].to_bytes(program, variable_map);
+                self.children[0].to_bytes(program, identifier_scopes);
             }
             ParserNodeType::WriteExpression => {
                 // Expression | ! | #
-                self.children[0].to_bytes(program, variable_map);
+                self.children[0].to_bytes(program, identifier_scopes);
                 if self.children[0].node_type == ParserNodeType::EqualityExpression {
                     program.push(Ops::Write as u8);
                 }
@@ -328,75 +316,75 @@ impl ParserNode<'_> {
                 WriteFormat::NewLine => program.push(Ops::WriteLine as u8),
                 WriteFormat::ClearScreen => program.push(Ops::WriteClearScreen as u8),
                 WriteFormat::ToCol => {
-                    self.children[0].to_bytes(program, variable_map);
+                    self.children[0].to_bytes(program, identifier_scopes);
                     program.push(Ops::WriteToCol as u8)
                 }
             },
             ParserNodeType::FormatExpression => {
                 // HashBangFormat
-                self.children[0].to_bytes(program, variable_map);
+                self.children[0].to_bytes(program, identifier_scopes);
 
                 //Has a FormatExpressionTail
                 if self.children.len() == 2 {
                     //FormatExpressionTail
-                    self.children[1].to_bytes(program, variable_map)
+                    self.children[1].to_bytes(program, identifier_scopes)
                 }
             }
             ParserNodeType::FormatExpressionTail => {
                 // RelationalExpression
-                self.children[0].to_bytes(program, variable_map);
+                self.children[0].to_bytes(program, identifier_scopes);
             }
             ParserNodeType::HashBangFormat => {
                 // WriteFormat
-                self.children[0].to_bytes(program, variable_map);
+                self.children[0].to_bytes(program, identifier_scopes);
 
                 // Has a HashBangFormat
                 if self.children.len() == 2 {
                     // HashBangFormat
-                    self.children[1].to_bytes(program, variable_map);
+                    self.children[1].to_bytes(program, identifier_scopes);
                 }
             }
             ParserNodeType::WriteExpressionList => {
                 // WriteExpression
-                self.children[0].to_bytes(program, variable_map);
+                self.children[0].to_bytes(program, identifier_scopes);
 
                 // Has a WriteExpressionListTail
                 if self.children.len() == 2 {
                     // ExpressionListTail
-                    self.children[1].to_bytes(program, variable_map);
+                    self.children[1].to_bytes(program, identifier_scopes);
                 }
             }
             ParserNodeType::WriteExpressionListTail => {
                 // WriteExpression
-                self.children[0].to_bytes(program, variable_map);
+                self.children[0].to_bytes(program, identifier_scopes);
 
                 // Has a WriteExpressionListTail
                 if self.children.len() == 2 {
                     // WriteExpressionListTail
-                    self.children[1].to_bytes(program, variable_map)
+                    self.children[1].to_bytes(program, identifier_scopes)
                 }
             }
             ParserNodeType::EqualityExpression => {
                 // RelationalExpression
-                self.children[0].to_bytes(program, variable_map);
+                self.children[0].to_bytes(program, identifier_scopes);
 
                 // Has an EqualityExpressionTail
                 if self.children.len() == 2 {
                     // EqualityExpressionTail
-                    self.children[1].to_bytes(program, variable_map);
+                    self.children[1].to_bytes(program, identifier_scopes);
                 }
             }
             ParserNodeType::EqualityExpressionTail => {
                 // RelationalExpression
-                self.children[1].to_bytes(program, variable_map);
+                self.children[1].to_bytes(program, identifier_scopes);
 
                 // EqOp
-                self.children[0].to_bytes(program, variable_map);
+                self.children[0].to_bytes(program, identifier_scopes);
 
                 // Has an EqualityExpressionTail
                 if self.children.len() == 3 {
                     // EqualityExpression
-                    self.children[2].to_bytes(program, variable_map);
+                    self.children[2].to_bytes(program, identifier_scopes);
                 }
             }
             ParserNodeType::EqOp(op) => match op {
@@ -405,25 +393,25 @@ impl ParserNode<'_> {
             },
             ParserNodeType::RelationalExpression => {
                 // Expression
-                self.children[0].to_bytes(program, variable_map);
+                self.children[0].to_bytes(program, identifier_scopes);
 
                 // Has a RelationalExpressionTail
                 if self.children.len() == 2 {
                     // RelationalExpressionTail
-                    self.children[1].to_bytes(program, variable_map)
+                    self.children[1].to_bytes(program, identifier_scopes)
                 }
             }
             ParserNodeType::RelationalExpressionTail => {
                 // Expression
-                self.children[1].to_bytes(program, variable_map);
+                self.children[1].to_bytes(program, identifier_scopes);
 
                 // RelOp
-                self.children[0].to_bytes(program, variable_map);
+                self.children[0].to_bytes(program, identifier_scopes);
 
                 // Has a RelationalExpressionTail
                 if self.children.len() == 3 {
                     //RelationalExpressionTail
-                    self.children[2].to_bytes(program, variable_map)
+                    self.children[2].to_bytes(program, identifier_scopes)
                 }
             }
             ParserNodeType::RelOp(op) => match op {
@@ -434,71 +422,71 @@ impl ParserNode<'_> {
             },
             ParserNodeType::Expression => {
                 // Term
-                self.children[0].to_bytes(program, variable_map);
+                self.children[0].to_bytes(program, identifier_scopes);
                 // Has an ExpressionTail
                 if self.children.len() == 2 {
-                    self.children[1].to_bytes(program, variable_map);
+                    self.children[1].to_bytes(program, identifier_scopes);
                 }
             }
             ParserNodeType::ExpressionTail => {
                 // Term
-                self.children[1].to_bytes(program, variable_map);
+                self.children[1].to_bytes(program, identifier_scopes);
                 // AddOp
-                self.children[0].to_bytes(program, variable_map);
+                self.children[0].to_bytes(program, identifier_scopes);
                 // Has an ExpressionTail
                 if self.children.len() == 3 {
                     // ExpressionTail
-                    self.children[2].to_bytes(program, variable_map);
+                    self.children[2].to_bytes(program, identifier_scopes);
                 }
             }
             ParserNodeType::Term => {
                 //Factor
-                self.children[0].to_bytes(program, variable_map);
+                self.children[0].to_bytes(program, identifier_scopes);
                 // Has a TermTail
                 if self.children.len() == 2 {
                     // TermTail
-                    self.children[1].to_bytes(program, variable_map);
+                    self.children[1].to_bytes(program, identifier_scopes);
                 }
             }
             ParserNodeType::TermTail => {
                 // Factor
-                self.children[1].to_bytes(program, variable_map);
+                self.children[1].to_bytes(program, identifier_scopes);
                 // MulOp
-                self.children[0].to_bytes(program, variable_map);
+                self.children[0].to_bytes(program, identifier_scopes);
                 // Has a TermTail
                 if self.children.len() == 3 {
                     // TermTail
-                    self.children[2].to_bytes(program, variable_map);
+                    self.children[2].to_bytes(program, identifier_scopes);
                 }
             }
             ParserNodeType::Unary => {
                 // Unary
-                self.children[1].to_bytes(program, variable_map);
+                self.children[1].to_bytes(program, identifier_scopes);
 
                 // UnaryOp
-                self.children[0].to_bytes(program, variable_map)
+                self.children[0].to_bytes(program, identifier_scopes)
             }
             ParserNodeType::ExpTerm => {
                 // Factor
-                self.children[0].to_bytes(program, variable_map);
+                self.children[0].to_bytes(program, identifier_scopes);
 
                 // Has an ExponentialTermTail
                 if self.children.len() == 2 {
                     // ExponentialTermTail
-                    self.children[1].to_bytes(program, variable_map);
+                    self.children[1].to_bytes(program, identifier_scopes);
                 }
             }
             ParserNodeType::ExpTermTail => {
                 // Factor
-                self.children[1].to_bytes(program, variable_map);
+                self.children[1].to_bytes(program, identifier_scopes);
 
                 // Exponential
-                self.children[0].to_bytes(program, variable_map);
+                self.children[0].to_bytes(program, identifier_scopes);
 
                 // Has an ExponentialTermTail
                 if self.children.len() == 3 {
                     // ExponentialTermTail
-                    self.children[2].to_bytes(program, variable_map);
+                    self.children[2].to_bytes(program, identifier_scopes);
                 }
             }
             ParserNodeType::ExpOp => program.push(Ops::Exp as u8),
@@ -507,7 +495,7 @@ impl ParserNode<'_> {
                 if let Identifier(_) = self.children[0].node_type {
                     program.push(Ops::Get as u8);
                 }
-                self.children[0].to_bytes(program, variable_map);
+                self.children[0].to_bytes(program, identifier_scopes);
             }
             ParserNodeType::MulOp(op) => match op {
                 MulOp::Times => program.push(Ops::Mult as u8),
@@ -537,11 +525,12 @@ impl ParserNode<'_> {
                 }
             }
             ParserNodeType::Identifier(identifier) => {
-                let var_definition = variable_map.get(&identifier.to_string());
+                let var_definition = identifier_scopes.get_variable(identifier.to_string());
+
                 if let None = var_definition {
                     panic!("Undefined variable {}.", identifier);
                 }
-                let position_bytes = var_definition.unwrap().stack_position.to_le_bytes();
+                let position_bytes = var_definition.unwrap().position.to_le_bytes();
                 for byte in position_bytes {
                     program.push(byte);
                 }
