@@ -66,33 +66,213 @@ pub fn print_parse_error(input: String, error: ParseError) {
 
 /// Check that the next token is of the expected type.
 /// Returns an appropriate ParseError if it does not.
-fn expect<'a>(tokens: &'a [Token<'a>], expected_type: TokenType) -> Result<(), ParseError<'a>> {
+fn expect<'a>(
+    tokens: &'a [Token<'a>],
+    expected_type: TokenType,
+    message: Option<&str>,
+) -> Result<(), ParseError<'a>> {
     if tokens.len() == 0 || tokens[0].token_type == expected_type {
         return Ok(());
     }
     return Err(ParseError {
         remaining_tokens: tokens,
-        message: format!("Expected {:?}.", expected_type),
+        message: if message.is_some() {
+            message.unwrap().to_string()
+        } else {
+            format!("Expected {:?}.", expected_type)
+        },
     });
 }
 
-/// Block -> Lines | ε
+/// File -> (FunctionDefinition | Lines)*
+fn parse_file<'a>(
+    tokens: &'a [Token],
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
+    let mut tokens = tokens;
+    let mut children: Vec<ParserNode> = Vec::new();
+    while tokens.len() > 0 {
+        match &tokens[0].token_type {
+            TokenType::Identifier => {
+                let (function_definition, function_definition_rest) =
+                    parse_function_definition(tokens)?;
+
+                children.push(function_definition.unwrap());
+
+                tokens = function_definition_rest
+            }
+
+            _ => {
+                let (lines, lines_rest) = parse_lines(tokens)?;
+
+                children.push(lines.unwrap());
+
+                tokens = lines_rest
+            }
+        }
+    }
+
+    return Ok((
+        Some(ParserNode::new(children, ParserNodeType::File, None)),
+        tokens,
+    ));
+}
+
+/// FunctionDefinition -> Identifier ( ParamList ) : Type Block
+fn parse_function_definition<'a>(
+    tokens: &'a [Token],
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
+    expect(tokens, TokenType::Identifier, None)?;
+    let identifier_node = ParserNode::new(
+        Vec::new(),
+        ParserNodeType::Identifier(tokens[0].value),
+        Some(&tokens[0]),
+    );
+
+    expect(&tokens[1..], TokenType::LParen, None)?;
+    let (param_list, param_list_rest) = parse_param_list(&tokens[2..])?;
+    expect(param_list_rest, TokenType::RParen, None)?;
+
+    expect(&param_list_rest[1..], TokenType::Colon, None)?;
+    let (type_node, type_node_rest) = parse_type(&param_list_rest[2..])?;
+
+    if let Some(type_node) = type_node {
+        let (block, block_rest) = parse_block(type_node_rest)?;
+        if let Some(block_node) = block {
+            if let Some(param_list_node) = param_list {
+                Ok((
+                    Some(ParserNode::new(
+                        vec![identifier_node, param_list_node, type_node, block_node],
+                        ParserNodeType::FunctionDefinition,
+                        None,
+                    )),
+                    block_rest,
+                ))
+            } else {
+                Ok((
+                    Some(ParserNode::new(
+                        vec![identifier_node, type_node, block_node],
+                        ParserNodeType::FunctionDefinition,
+                        None,
+                    )),
+                    block_rest,
+                ))
+            }
+        } else {
+            Err(ParseError {
+                remaining_tokens: type_node_rest,
+                message: "Missing function block.".to_string(),
+            })
+        }
+    } else {
+        unreachable!("Type cannot go to epsilon")
+    }
+}
+
+/// ParamList -> Identifier : Type | ε
+fn parse_param_list<'a>(
+    tokens: &'a [Token],
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
+    if tokens.len() < 3 {
+        return Ok((None, tokens));
+    }
+
+    return match &tokens[0].token_type {
+        TokenType::Identifier => {
+            let identifier_node = ParserNode::new(
+                Vec::new(),
+                ParserNodeType::Identifier(tokens[0].value),
+                Some(&tokens[0]),
+            );
+
+            expect(&tokens[1..], TokenType::Colon, None)?;
+
+            let (type_node, type_node_rest) = parse_type(&tokens[2..])?;
+
+            if let Some(type_node) = type_node {
+                let (param_list_tail, param_list_tail_rest) =
+                    parse_param_list_tail(type_node_rest)?;
+
+                if let Some(param_list_tail_node) = param_list_tail {
+                    Ok((
+                        Some(ParserNode::new(
+                            vec![identifier_node, type_node, param_list_tail_node],
+                            ParserNodeType::ParamList,
+                            None,
+                        )),
+                        param_list_tail_rest,
+                    ))
+                } else {
+                    Ok((
+                        Some(ParserNode::new(
+                            vec![identifier_node, type_node],
+                            ParserNodeType::ParamList,
+                            None,
+                        )),
+                        type_node_rest,
+                    ))
+                }
+            } else {
+                unreachable!("Type cannot go to epsilon");
+            }
+        }
+        _ => Ok((None, tokens)),
+    };
+}
+
+/// ParamListTail -> , Identifier : Type | ε
+fn parse_param_list_tail<'a>(
+    tokens: &'a [Token],
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
+    match &tokens[0].token_type {
+        TokenType::Comma => {
+            expect(&tokens[1..], TokenType::Identifier, None)?;
+
+            let identifier_node = ParserNode::new(
+                Vec::new(),
+                ParserNodeType::Identifier(tokens[1].value),
+                Some(&tokens[1]),
+            );
+
+            expect(&tokens[2..], TokenType::Comma, None)?;
+
+            let (type_node, type_node_rest) = parse_type(&tokens[3..])?;
+
+            if let Some(type_node) = type_node {
+                Ok((
+                    Some(ParserNode::new(
+                        vec![identifier_node, type_node],
+                        ParserNodeType::ParamListTail,
+                        None,
+                    )),
+                    &tokens[4..],
+                ))
+            } else {
+                unreachable!("Type cannot go to epsilon")
+            }
+        }
+        _ => Ok((None, tokens)),
+    }
+}
+
+/// Block -> { Lines } | ε
 fn parse_block<'a>(
     tokens: &'a [Token],
 ) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
-    let (lines, lines_rest) = parse_lines(tokens)?;
+    expect(tokens, TokenType::LCurly, None)?;
+    let (lines, lines_rest) = parse_lines(&tokens[1..])?;
 
     if let Some(lines_node) = lines {
+        expect(lines_rest, TokenType::RCurly, Some("Missing closing '}'."))?;
         Ok((
             Some(ParserNode::new(
                 vec![lines_node],
                 ParserNodeType::Block(None),
                 None,
             )),
-            lines_rest,
+            &lines_rest[1..],
         ))
     } else {
-        Ok((None, lines_rest))
+        Ok((None, tokens))
     }
 }
 
@@ -143,7 +323,7 @@ fn parse_line<'a>(
         let (statements, statements_rest) = parse_statements(statement_rest)?;
 
         if let Some(statements_node) = statements {
-            expect(statements_rest, TokenType::NewLine)?;
+            expect(statements_rest, TokenType::NewLine, None)?;
 
             Ok((
                 Some(ParserNode::new(
@@ -154,7 +334,7 @@ fn parse_line<'a>(
                 &statements_rest[1..],
             ))
         } else {
-            expect(statements_rest, TokenType::NewLine)?;
+            expect(statements_rest, TokenType::NewLine, None)?;
 
             Ok((
                 Some(ParserNode::new(
@@ -166,7 +346,7 @@ fn parse_line<'a>(
             ))
         }
     } else {
-        expect(statement_rest, TokenType::NewLine)?;
+        expect(statement_rest, TokenType::NewLine, None)?;
 
         Ok((
             Some(ParserNode::new(Vec::new(), ParserNodeType::Line, None)),
@@ -550,7 +730,7 @@ fn parse_else_statement<'a>(
 fn parse_new_statement<'a>(
     tokens: &'a [Token],
 ) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
-    expect(tokens, TokenType::Reserved(ReservedToken::New))?;
+    expect(tokens, TokenType::Reserved(ReservedToken::New), None)?;
 
     let (identifier_list, identifier_list_rest) = parse_identifier_list(&tokens[1..])?;
 
@@ -572,7 +752,7 @@ fn parse_new_statement<'a>(
 fn parse_identifier_list<'a>(
     tokens: &'a [Token],
 ) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
-    expect(tokens, TokenType::Identifier)?;
+    expect(tokens, TokenType::Identifier, None)?;
 
     let identifier_node = ParserNode::new(
         Vec::new(),
@@ -580,7 +760,7 @@ fn parse_identifier_list<'a>(
         Some(&tokens[0]),
     );
 
-    expect(&tokens[1..], TokenType::Colon)?;
+    expect(&tokens[1..], TokenType::Colon, None)?;
 
     if tokens.len() < 2 {
         return Err(ParseError {
@@ -652,7 +832,7 @@ fn parse_identifier_list_tail<'a>(
 
     return match &tokens[0].token_type {
         TokenType::Comma => {
-            expect(&tokens[1..], TokenType::Identifier)?;
+            expect(&tokens[1..], TokenType::Identifier, None)?;
 
             let identifier_node = ParserNode::new(
                 Vec::new(),
@@ -660,7 +840,7 @@ fn parse_identifier_list_tail<'a>(
                 Some(&tokens[1]),
             );
 
-            expect(&tokens[2..], TokenType::Colon)?;
+            expect(&tokens[2..], TokenType::Colon, None)?;
 
             if tokens.len() < 3 {
                 return Err(ParseError {
@@ -728,7 +908,7 @@ fn parse_identifier_list_tail<'a>(
 fn parse_set_statement<'a>(
     tokens: &'a [Token],
 ) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
-    expect(tokens, TokenType::Reserved(ReservedToken::Set))?;
+    expect(tokens, TokenType::Reserved(ReservedToken::Set), None)?;
 
     let (assignment_list, assignment_list_rest) = parse_assignment_list(&tokens[1..])?;
 
@@ -840,7 +1020,7 @@ fn parse_assignment_statement<'a>(
                 Some(&tokens[0]),
             );
 
-            expect(&tokens[1..], TokenType::Equals)?;
+            expect(&tokens[1..], TokenType::Equals, None)?;
             let (equality_expression, equality_expression_rest) =
                 parse_equality_expression(&tokens[2..])?;
 
@@ -865,7 +1045,7 @@ fn parse_assignment_statement<'a>(
 fn parse_write_statement<'a>(
     tokens: &'a [Token],
 ) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
-    expect(tokens, TokenType::Reserved(ReservedToken::Write))?;
+    expect(tokens, TokenType::Reserved(ReservedToken::Write), None)?;
 
     let (write_expression_list, write_expression_list_rest) =
         parse_write_expression_list(&tokens[1..])?;
