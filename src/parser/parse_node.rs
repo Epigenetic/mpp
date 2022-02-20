@@ -18,6 +18,9 @@ pub struct ParserNode<'a> {
     pub token: Option<&'a Token<'a>>,
 }
 
+// TODO: Find a less hacky way to do this than using a static
+static mut CURRENT_FUNCTION_NAME: Option<String> = None;
+
 impl ParserNode<'_> {
     pub fn new<'a>(
         children: Vec<ParserNode<'a>>,
@@ -34,9 +37,97 @@ impl ParserNode<'_> {
 
     pub fn to_bytes(&self, program: &mut Vec<u8>, identifier_scopes: &mut Scopes) {
         match &self.node_type {
+            ParserNodeType::File => {
+                for child in &self.children {
+                    child.to_bytes(program, identifier_scopes)
+                }
+            }
+
+            ParserNodeType::FunctionDefinition => {
+                if let ParserNodeType::Identifier(identifier_name) = self.children[0].node_type {
+                    unsafe {
+                        CURRENT_FUNCTION_NAME = Some(identifier_name.to_string());
+                    }
+
+                    // Has a ParamList
+                    if ParserNodeType::ParamList == self.children[1].node_type {
+                        if let ParserNodeType::Type(val_type) = &self.children[2].node_type {
+                            identifier_scopes.add_function(
+                                identifier_name.to_string(),
+                                val_type.to_mval_type(),
+                                program.len(),
+                            );
+                        } else {
+                            unreachable!()
+                        }
+                        identifier_scopes.begin_scope();
+
+                        // ParamList
+                        self.children[1].to_bytes(program, identifier_scopes);
+                    } else {
+                        if let ParserNodeType::Type(val_type) = &self.children[1].node_type {
+                            identifier_scopes.add_function(
+                                identifier_name.to_string(),
+                                val_type.to_mval_type(),
+                                program.len(),
+                            );
+                        } else {
+                            unreachable!()
+                        }
+                        identifier_scopes.begin_scope();
+                    }
+
+                    // Block
+                    self.children
+                        .last()
+                        .unwrap()
+                        .to_bytes(program, identifier_scopes);
+
+                    identifier_scopes.end_scope();
+
+                    unsafe { CURRENT_FUNCTION_NAME = None }
+                } else {
+                    unreachable!()
+                }
+            }
+
+            ParserNodeType::ParamList | ParserNodeType::ParamListTail => {
+                if let ParserNodeType::Identifier(identifier_name) = &self.children[0].node_type {
+                    //TODO: We should probably make a New X op to allow us to initialize all of the
+                    //      parameters at once
+                    program.push(Ops::New as u8);
+                    if let ParserNodeType::Type(type_val) = &self.children[1].node_type {
+                        self.children[1].to_bytes(program, identifier_scopes);
+                        let val_type = type_val.to_mval_type();
+                        identifier_scopes.add_variable(identifier_name.to_string(), val_type);
+                        unsafe {
+                            let function_definition = identifier_scopes
+                                .get_function_mut(CURRENT_FUNCTION_NAME.clone().unwrap())
+                                .expect("Function not defined before trying to add parameter");
+
+                            function_definition.params_types.push(ParameterDefinition {
+                                name: identifier_name.to_string(),
+                                val_type,
+                            })
+                        }
+                    }
+
+                    // Has a ParamListTail
+                    if self.children.len() == 3 {
+                        // ParamListTail
+                        self.children[2].to_bytes(program, identifier_scopes)
+                    }
+                } else {
+                    unreachable!()
+                }
+            }
+
             ParserNodeType::Block(_) => {
+                identifier_scopes.begin_scope();
                 // Lines
                 self.children[0].to_bytes(program, identifier_scopes);
+
+                identifier_scopes.end_scope();
             }
 
             ParserNodeType::Lines => {
@@ -569,6 +660,12 @@ impl ParserNode<'_> {
 impl fmt::Display for ParserNode<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self.node_type {
+            ParserNodeType::File => write!(f, "File"),
+
+            ParserNodeType::FunctionDefinition => write!(f, "FunctionDefinition"),
+            ParserNodeType::ParamList => write!(f, "ParamList"),
+            ParserNodeType::ParamListTail => write!(f, "ParamListTail"),
+
             ParserNodeType::Block(_) => write!(f, "Block"),
 
             ParserNodeType::Lines => write!(f, "Lines"),
@@ -629,6 +726,12 @@ impl fmt::Display for ParserNode<'_> {
 
 #[derive(PartialEq)]
 pub enum ParserNodeType<'a> {
+    File,
+
+    FunctionDefinition,
+    ParamList,
+    ParamListTail,
+
     Block(Option<HashMap<&'a str, usize>>),
 
     Lines,

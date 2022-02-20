@@ -25,14 +25,29 @@ impl Parser<'_> {
             return Ok(None);
         }
 
-        let (block, line_rest) = parse_block(&self.tokens)?;
+        let (file, file_rest) = parse_file(&self.tokens)?;
+        if file_rest.len() != 0 {
+            println!("Warning: not all tokens processed.");
+            for token in file_rest {
+                println!("{}", token);
+            }
+        }
+        return Ok(file);
+    }
+
+    pub fn parse_line<'a>(&self) -> Result<Option<ParserNode>, ParseError> {
+        if self.tokens.len() == 0 {
+            return Ok(None);
+        }
+
+        let (line, line_rest) = parse_line(&self.tokens)?;
         if line_rest.len() != 0 {
             println!("Warning: not all tokens processed.");
             for token in line_rest {
                 println!("{}", token);
             }
         }
-        return Ok(block);
+        return Ok(line);
     }
 }
 
@@ -280,7 +295,7 @@ fn parse_block<'a>(
 fn parse_lines<'a>(
     tokens: &'a [Token],
 ) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
-    if tokens.len() == 0 {
+    if tokens.len() == 0 || tokens[0].token_type == TokenType::RCurly {
         return Ok((None, tokens));
     }
 
@@ -477,7 +492,9 @@ fn parse_statement<'a>(
                 unreachable!("ForStatement cannot go to epsilon.")
             }
         }
-        TokenType::NewLine | TokenType::Reserved(ReservedToken::Else) => Ok((None, tokens)),
+        TokenType::NewLine | TokenType::Reserved(ReservedToken::Else) | TokenType::RCurly => {
+            Ok((None, tokens))
+        }
         _ => Err(ParseError {
             remaining_tokens: tokens,
             message: "Illegal start of statement.".to_string(),
