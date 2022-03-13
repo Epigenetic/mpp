@@ -74,6 +74,8 @@ pub enum TokenType {
     NewLine,
     LCurly,
     RCurly,
+
+    DollarDollar,
 }
 
 #[derive(PartialEq, Debug)]

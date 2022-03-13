@@ -276,6 +276,19 @@ impl Tokenizer {
                     self.position += 1;
                     self.row += 1;
                 }
+                '$' => {
+                    if str_array[self.position + 1] == '$' {
+                        tokens.push(Token::new(
+                            TokenType::DollarDollar,
+                            self.row,
+                            self.row + 2,
+                            self.line,
+                            &self.input[self.position..self.position + 2],
+                        ));
+                        self.position += 2;
+                        self.row += 2;
+                    }
+                }
                 'w' | 'W' => {
                     let (token, size) =
                         tokenize_write(&self.input[self.position..], self.row, self.line)?;
@@ -1610,7 +1623,7 @@ mod tests {
     }
     //endregion
 
-    //regions Lex Else Tests
+    //region Lex Else Tests
     #[test]
     fn test_lex_else_short() {
         let input = "e";
@@ -1784,4 +1797,20 @@ mod tests {
     }
 
     //endregion
+
+    #[test]
+    fn test_lex_dollar_dollar() {
+        let input = "$$";
+        let mut tokenizer = Tokenizer::new(input.to_string());
+        let tokens = tokenizer.tokenize();
+
+        assert!(tokens.is_ok());
+        if let Ok(tokens_ok) = tokens {
+            assert_eq!(tokens_ok.len(), 1);
+            assert_eq!(
+                tokens_ok[0],
+                Token::new(TokenType::DollarDollar, 0, 2, 0, "$$")
+            )
+        }
+    }
 }
