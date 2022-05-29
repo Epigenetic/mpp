@@ -6,27 +6,32 @@
 
 use crate::runtime::mval::{MVal, MValType};
 use crate::runtime::Ops;
+use crate::Scopes;
 use crossterm::cursor::{position, MoveTo};
 use crossterm::terminal::{Clear, ClearType};
 use crossterm::ExecutableCommand;
 use std::convert::TryInto;
-use std::io;
 use std::io::{stdout, Write};
 use std::rc::Rc;
+use std::{io, rc};
 
 pub struct VM {
     stack: Vec<Rc<MVal>>,
     program: Vec<u8>,
     program_counter: usize,
+    stack_frame_base: usize,
     print_status: bool,
 }
 
 impl VM {
-    pub fn new(program: Vec<u8>, print_status: bool) -> VM {
+    pub fn new(program: Vec<u8>, print_status: bool, scopes: &Scopes) -> VM {
+        let main_function = scopes.get_function("main".to_string()).unwrap();
+
         VM {
             stack: Vec::new(),
             program,
-            program_counter: 0,
+            program_counter: main_function.position,
+            stack_frame_base: 0,
             print_status,
         }
     }
@@ -69,6 +74,9 @@ impl VM {
                 Ops::Jump => self.execute_jump(),
                 Ops::JumpUp => self.execute_jump_up(),
                 Ops::Pop => self.execute_pop(),
+                Ops::Call => self.execute_call(),
+                Ops::Return => self.execute_return(),
+                Ops::Exit => self.execute_exit(),
             }
         }
     }
@@ -328,5 +336,40 @@ impl VM {
     fn execute_pop(&mut self) {
         self.stack.pop();
         self.program_counter += 1;
+    }
+
+    fn execute_call(&mut self) {
+        let mut old_frame_base = MVal::new(MValType::Int);
+        old_frame_base.set_int_val(self.stack.len() as i32);
+        // Save off the old stack frame base
+        self.stack.push(Rc::new(old_frame_base));
+
+        let mut return_addr = MVal::new(MValType::Int);
+        return_addr.set_int_val((self.program_counter + 1 + std::mem::size_of::<usize>()) as i32);
+        // Save off the return address
+        self.stack.push(Rc::new(return_addr));
+
+        // Allocate slot for return value
+        self.stack.push(Rc::new(MVal::new(MValType::Null)));
+
+        let call_addr_bytes = &self.program
+            [self.program_counter + 1..self.program_counter + 1 + std::mem::size_of::<usize>()];
+        self.program_counter = usize::from_le_bytes(call_addr_bytes.try_into().unwrap());
+        self.stack_frame_base = self.stack.len() - 1;
+    }
+
+    fn execute_return(&mut self) {
+        println!("Base: {}", self.stack_frame_base);
+        self.program_counter = self.stack[self.stack_frame_base - 1].get_int_val() as usize;
+        self.stack_frame_base = self.stack[self.stack_frame_base - 2].get_int_val() as usize;
+        let return_value = self.stack.pop().expect("Return value not stored");
+        self.stack.pop();
+        self.stack.pop();
+        self.stack.push(return_value)
+    }
+
+    fn execute_exit(&mut self) {
+        // TODO: Implement this in a less hacky way
+        self.program_counter = usize::MAX;
     }
 }

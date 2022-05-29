@@ -18,6 +18,7 @@ pub struct FunctionDefinition {
     pub return_type: MValType,
     pub params_types: Vec<ParameterDefinition>,
     pub position: usize,
+    pub callers: Vec<usize>,
 }
 
 #[derive(Debug)]
@@ -83,6 +84,7 @@ impl Scope {
                 return_type,
                 params_types,
                 position,
+                callers: Vec::new(),
             },
         );
     }
@@ -118,6 +120,29 @@ impl Scopes {
 
     pub fn end_scope(&mut self) {
         self.scopes.pop();
+    }
+
+    pub fn patch_function_calls(&self, program: &mut Vec<u8>) {
+        for scope in &self.scopes {
+            for (_, function) in &scope.functions {
+                for caller in &function.callers {
+                    self.patch_function_call(caller, function.position, program)
+                }
+            }
+        }
+    }
+
+    fn patch_function_call(
+        &self,
+        caller_position: &usize,
+        function_position: usize,
+        program: &mut Vec<u8>,
+    ) {
+        let mut position = *caller_position;
+        for byte in function_position.to_le_bytes() {
+            program[position] = byte;
+            position += 1;
+        }
     }
 
     pub fn get_variable(&self, variable_name: String) -> Option<&VariableDefinition> {

@@ -39,11 +39,14 @@ pub enum Ops {
     Jump = 26,
     JumpUp = 27,
     Pop = 28,
+    Call = 29,
+    Return = 30,
+    Exit = 31,
 }
 
 impl Ops {
     pub fn from_u8(value: u8) -> Ops {
-        if value < 1 || value > 28 {
+        if value < 1 || value > 31 {
             panic!("Unrecognized op code {}", value)
         }
         return unsafe { transmute(value) };
@@ -176,6 +179,22 @@ pub fn print_program(program: &Vec<u8>) {
             }
             Ops::Pop => {
                 println!("POP");
+                index += 1;
+            }
+            Ops::Call => {
+                let call_addr = &program[index + 1..index + 1 + std::mem::size_of::<usize>()];
+                println!(
+                    "CALL {}",
+                    usize::from_le_bytes(call_addr.try_into().unwrap())
+                );
+                index += 1 + std::mem::size_of::<usize>()
+            }
+            Ops::Return => {
+                println!("RETURN");
+                index += 1;
+            }
+            Ops::Exit => {
+                println!("EXIT");
                 index += 1;
             }
         }

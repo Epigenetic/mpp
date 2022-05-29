@@ -116,6 +116,8 @@ fn parse_file<'a>(
                 tokens = function_definition_rest
             }
 
+            TokenType::NewLine => tokens = &tokens[1..],
+
             _ => {
                 let (lines, lines_rest) = parse_lines(tokens)?;
 
@@ -183,7 +185,7 @@ fn parse_function_definition<'a>(
     }
 }
 
-/// ParamList -> Identifier : Type | ε
+/// ParamList -> Identifier : Type ParamListTail | ε
 fn parse_param_list<'a>(
     tokens: &'a [Token],
 ) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
@@ -248,7 +250,7 @@ fn parse_param_list_tail<'a>(
                 Some(&tokens[1]),
             );
 
-            expect(&tokens[2..], TokenType::Comma, None)?;
+            expect(&tokens[2..], TokenType::Colon, None)?;
 
             let (type_node, type_node_rest) = parse_type(&tokens[3..])?;
 
@@ -259,7 +261,7 @@ fn parse_param_list_tail<'a>(
                         ParserNodeType::ParamListTail,
                         None,
                     )),
-                    &tokens[4..],
+                    type_node_rest,
                 ))
             } else {
                 unreachable!("Type cannot go to epsilon")
@@ -1346,6 +1348,142 @@ fn parse_format_expression_tail<'a>(
     };
 }
 
+/// ExpressionOrFunctionCall -> EqualityExpression | FunctionCall
+fn parse_expression_or_function_call<'a>(
+    tokens: &'a [Token],
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
+    if tokens[0].token_type == TokenType::DollarDollar {
+        let (function_call, function_call_rest) = parse_function_call(tokens)?;
+        Ok((
+            Some(ParserNode::new(
+                vec![function_call.unwrap()],
+                ParserNodeType::ExpressionOrFunctionCall,
+                None,
+            )),
+            function_call_rest,
+        ))
+    } else {
+        let (equality_expression, equality_expression_rest) = parse_equality_expression(tokens)?;
+        Ok((
+            Some(ParserNode::new(
+                vec![equality_expression.unwrap()],
+                ParserNodeType::ExpressionOrFunctionCall,
+                None,
+            )),
+            equality_expression_rest,
+        ))
+    }
+}
+
+/// FunctionCall -> $$ Identifier ( ExpressionList )
+fn parse_function_call<'a>(
+    tokens: &'a [Token],
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
+    expect(tokens, TokenType::DollarDollar, None)?;
+    expect(&tokens[1..], TokenType::Identifier, None)?;
+    let identifier_node = ParserNode::new(
+        Vec::new(),
+        ParserNodeType::Identifier(tokens[1].value),
+        Some(&tokens[1]),
+    );
+    expect(&tokens[2..], TokenType::LParen, None)?;
+    let (expression_list, expression_list_tail) = parse_expression_list(&tokens[3..])?;
+    expect(expression_list_tail, TokenType::RParen, None)?;
+    if let Some(expression_list_node) = expression_list {
+        Ok((
+            Some(ParserNode::new(
+                vec![identifier_node, expression_list_node],
+                ParserNodeType::FunctionCall,
+                None,
+            )),
+            &expression_list_tail[1..],
+        ))
+    } else {
+        Ok((
+            Some(ParserNode::new(
+                vec![identifier_node],
+                ParserNodeType::FunctionCall,
+                None,
+            )),
+            &tokens[3..],
+        ))
+    }
+}
+
+/// ExpressionList -> ExpressionOrFunctionCall ExpressionListTail | ε
+fn parse_expression_list<'a>(
+    tokens: &'a [Token],
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
+    let (expression_or_function_call, expression_or_function_call_rest) =
+        parse_expression_or_function_call(tokens)?;
+
+    if let Some(expression_or_function_call_node) = expression_or_function_call {
+        let (expression_list_tail, expression_list_tail_rest) =
+            parse_expression_list_tail(expression_or_function_call_rest)?;
+        if let Some(expression_list_tail_node) = expression_list_tail {
+            Ok((
+                Some(ParserNode::new(
+                    vec![expression_list_tail_node],
+                    ParserNodeType::ExpressionList,
+                    None,
+                )),
+                expression_list_tail_rest,
+            ))
+        } else {
+            Ok((
+                Some(ParserNode::new(
+                    vec![expression_or_function_call_node],
+                    ParserNodeType::ExpressionList,
+                    None,
+                )),
+                expression_or_function_call_rest,
+            ))
+        }
+    } else {
+        Ok((None, tokens))
+    }
+}
+
+/// ExpressionListTail -> , ExpressionOrFunctionCall ExpressionListTail | ε
+fn parse_expression_list_tail<'a>(
+    tokens: &'a [Token],
+) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
+    match &tokens[0].token_type {
+        TokenType::Comma => {
+            let (expression_or_function_call, expression_or_function_call_rest) =
+                parse_expression_or_function_call(&tokens[1..])?;
+
+            let (expression_list_tail, expression_list_tail_rest) =
+                parse_expression_list_tail(expression_or_function_call_rest)?;
+
+            if let Some(expression_list_tail_node) = expression_list_tail {
+                Ok((
+                    Some(ParserNode::new(
+                        vec![
+                            expression_or_function_call.unwrap(),
+                            expression_list_tail_node,
+                        ],
+                        ParserNodeType::Expression,
+                        None,
+                    )),
+                    expression_list_tail_rest,
+                ))
+            } else {
+                Ok((
+                    Some(ParserNode::new(
+                        vec![expression_or_function_call.unwrap()],
+                        ParserNodeType::ExpressionListTail,
+                        None,
+                    )),
+                    expression_or_function_call_rest,
+                ))
+            }
+        }
+
+        _ => Ok((None, tokens)),
+    }
+}
+
 /// EqualityExpression -> RelationalExpression EqualityExpressionTail
 fn parse_equality_expression<'a>(
     tokens: &'a [Token],
@@ -1945,7 +2083,7 @@ fn parse_exponential<'a>(tokens: &'a [Token]) -> (Option<ParserNode<'a>>, &'a [T
     };
 }
 
-/// Factor -> NumericLiteral | ( expression ) | StringLiteral | Identifier
+/// Factor -> NumericLiteral | ( expression ) | StringLiteral | Identifier | FunctionCall
 fn parse_factor<'a>(
     tokens: &'a [Token],
 ) -> Result<(Option<ParserNode<'a>>, &'a [Token<'a>]), ParseError<'a>> {
@@ -2062,10 +2200,20 @@ fn parse_factor<'a>(
                 unreachable!("Expression cannot go to epsilon")
             };
         }
-        _ => Err(ParseError {
-            remaining_tokens: tokens,
-            message: "Not a value.".to_string(),
-        }),
+
+        // FunctionCall
+        TokenType::DollarDollar => {
+            let ret_val = parse_function_call(tokens)?;
+            Ok(ret_val)
+        }
+
+        _ => {
+            println!("{:?}", tokens);
+            Err(ParseError {
+                remaining_tokens: tokens,
+                message: "Not a value.".to_string(),
+            })
+        }
     }
 }
 

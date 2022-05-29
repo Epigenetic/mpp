@@ -13,6 +13,7 @@ pub use parse_node::ParserNode;
 pub use parse_node::ParserNodeType;
 pub use parser::print_parse_error;
 pub use parser::Parser;
+pub use scope::ParameterDefinition;
 pub use scope::Scope;
 pub use scope::Scopes;
 pub use scope::VariableDefinition;

@@ -120,6 +120,7 @@ impl MVal {
                 },
                 MValType::Int => MValValue { int: 0 },
                 MValType::Double => MValValue { double: 0.0 },
+                MValType::Null => MValValue { int: 0 },
                 _ => unreachable!("Cannot construct type {:?}", mval_type),
             }),
             value_type: mval_type,

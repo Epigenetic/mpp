@@ -5,7 +5,6 @@
  */
 
 use crate::lexer::Token;
-use crate::parser::parse_node::ParserNodeType::Identifier;
 use crate::parser::scope::{ParameterDefinition, Scopes};
 use crate::runtime::{MVal, MValType, Ops};
 use std::collections::HashMap;
@@ -17,9 +16,6 @@ pub struct ParserNode<'a> {
     pub value_type: Option<MValType>,
     pub token: Option<&'a Token<'a>>,
 }
-
-// TODO: Find a less hacky way to do this than using a static
-static mut CURRENT_FUNCTION_NAME: Option<String> = None;
 
 impl ParserNode<'_> {
     pub fn new<'a>(
@@ -45,37 +41,10 @@ impl ParserNode<'_> {
 
             ParserNodeType::FunctionDefinition => {
                 if let ParserNodeType::Identifier(identifier_name) = self.children[0].node_type {
-                    unsafe {
-                        CURRENT_FUNCTION_NAME = Some(identifier_name.to_string());
-                    }
-
-                    // Has a ParamList
-                    if ParserNodeType::ParamList == self.children[1].node_type {
-                        if let ParserNodeType::Type(val_type) = &self.children[2].node_type {
-                            identifier_scopes.add_function(
-                                identifier_name.to_string(),
-                                val_type.to_mval_type(),
-                                program.len(),
-                            );
-                        } else {
-                            unreachable!()
-                        }
-                        identifier_scopes.begin_scope();
-
-                        // ParamList
-                        self.children[1].to_bytes(program, identifier_scopes);
-                    } else {
-                        if let ParserNodeType::Type(val_type) = &self.children[1].node_type {
-                            identifier_scopes.add_function(
-                                identifier_name.to_string(),
-                                val_type.to_mval_type(),
-                                program.len(),
-                            );
-                        } else {
-                            unreachable!()
-                        }
-                        identifier_scopes.begin_scope();
-                    }
+                    identifier_scopes
+                        .get_function_mut(identifier_name.to_string())
+                        .unwrap()
+                        .position = program.len();
 
                     // Block
                     self.children
@@ -83,43 +52,53 @@ impl ParserNode<'_> {
                         .unwrap()
                         .to_bytes(program, identifier_scopes);
 
-                    identifier_scopes.end_scope();
-
-                    unsafe { CURRENT_FUNCTION_NAME = None }
+                    if identifier_name == "main" {
+                        program.push(Ops::Exit as u8)
+                    } else {
+                        program.push(Ops::Return as u8)
+                    }
                 } else {
                     unreachable!()
                 }
             }
 
-            ParserNodeType::ParamList | ParserNodeType::ParamListTail => {
-                if let ParserNodeType::Identifier(identifier_name) = &self.children[0].node_type {
-                    //TODO: We should probably make a New X op to allow us to initialize all of the
-                    //      parameters at once
-                    program.push(Ops::New as u8);
-                    if let ParserNodeType::Type(type_val) = &self.children[1].node_type {
-                        self.children[1].to_bytes(program, identifier_scopes);
-                        let val_type = type_val.to_mval_type();
-                        identifier_scopes.add_variable(identifier_name.to_string(), val_type);
-                        unsafe {
-                            let function_definition = identifier_scopes
-                                .get_function_mut(CURRENT_FUNCTION_NAME.clone().unwrap())
-                                .expect("Function not defined before trying to add parameter");
+            ParserNodeType::ExpressionOrFunctionCall => {
+                // EqualityExpression or FunctionCall
+                self.children[0].to_bytes(program, identifier_scopes);
+            }
 
-                            function_definition.params_types.push(ParameterDefinition {
-                                name: identifier_name.to_string(),
-                                val_type,
-                            })
-                        }
-                    }
+            ParserNodeType::ExpressionList | ParserNodeType::ExpressionListTail => {
+                self.children[0].to_bytes(program, identifier_scopes);
 
-                    // Has a ParamListTail
-                    if self.children.len() == 3 {
-                        // ParamListTail
-                        self.children[2].to_bytes(program, identifier_scopes)
-                    }
-                } else {
-                    unreachable!()
+                if self.children.len() == 2 {
+                    self.children[1].to_bytes(program, identifier_scopes);
                 }
+            }
+
+            ParserNodeType::FunctionCall => {
+                if self.children.len() == 2 {
+                    self.children[1].to_bytes(program, identifier_scopes)
+                }
+
+                if let ParserNodeType::Identifier(identifier_name) = &self.children[0].node_type {
+                    let function_definition = identifier_scopes
+                        .get_function_mut(identifier_name.to_string())
+                        .expect(&format!("Function {} not defined!", identifier_name));
+
+                    program.push(Ops::Call as u8);
+                    function_definition.callers.push(program.len());
+                    for position_byte in function_definition.position.to_le_bytes() {
+                        program.push(position_byte)
+                    }
+
+                    for _ in &function_definition.params_types {
+                        program.push(Ops::Pop as u8)
+                    }
+                }
+            }
+
+            ParserNodeType::ParamList | ParserNodeType::ParamListTail => {
+                // Note- We do not actually generate any code for parameters function calls do all of the actual work
             }
 
             ParserNodeType::Block(_) => {
@@ -557,7 +536,7 @@ impl ParserNode<'_> {
             ParserNodeType::ExpOp => program.push(Ops::Exp as u8),
             ParserNodeType::Factor => {
                 // NumericLiteral | StringLiteral | ( Expression ) | Identifier
-                if let Identifier(_) = self.children[0].node_type {
+                if let ParserNodeType::Identifier(_) = self.children[0].node_type {
                     program.push(Ops::Get as u8);
                 }
                 self.children[0].to_bytes(program, identifier_scopes);
@@ -648,7 +627,7 @@ impl ParserNode<'_> {
     /// * `start_pos` - Where the patch should start
     /// * `jump_offset` - Length of the jump
     fn back_patch_jump(&self, program: &mut Vec<u8>, start_pos: usize, jump_offset: usize) {
-        if jump_offset > std::u16::MAX as usize {
+        if jump_offset > u16::MAX as usize {
             panic!("Offset greater than max jump length")
         }
         let offset_bytes: [u8; 2] = (jump_offset as u16).to_le_bytes();
@@ -661,6 +640,11 @@ impl fmt::Display for ParserNode<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self.node_type {
             ParserNodeType::File => write!(f, "File"),
+
+            ParserNodeType::FunctionCall => write!(f, "FunctionCal"),
+            ParserNodeType::ExpressionList => write!(f, "ExpressionList"),
+            ParserNodeType::ExpressionListTail => write!(f, "ExpressionListTail"),
+            ParserNodeType::ExpressionOrFunctionCall => write!(f, "ExpressionOrFunctionCall"),
 
             ParserNodeType::FunctionDefinition => write!(f, "FunctionDefinition"),
             ParserNodeType::ParamList => write!(f, "ParamList"),
@@ -727,6 +711,12 @@ impl fmt::Display for ParserNode<'_> {
 #[derive(PartialEq)]
 pub enum ParserNodeType<'a> {
     File,
+
+    ExpressionOrFunctionCall,
+    FunctionCall,
+
+    ExpressionList,
+    ExpressionListTail,
 
     FunctionDefinition,
     ParamList,
